@@ -1,0 +1,18 @@
+[project]
+name = "printables"
+version = "0.1.0"
+description = "Parametric 3D-printable models for the Bambu Lab P2S"
+authors = [
+    { name = "Philip Mathieu", email = "philip.eng.mathieu@gmail.com" }
+]
+requires-python = ">=3.12"
+license = "LicenseRef-Proprietary"
+dependencies = [
+    "build123d>=0.11.1",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
