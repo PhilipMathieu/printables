@@ -116,21 +116,28 @@ def center_on_bed(threemf: Path, nozzle: float = profiles.DEFAULT_NOZZLE) -> Pat
     dy = mach.bed_y / 2 - (min(ys) + max(ys)) / 2
     dz = -min(zs)
 
-    def shift(match: re.Match) -> str:
-        head, transform = match.group(1), match.group(2)
-        if transform:
-            m = [float(v) for v in transform.split()]
-        else:
-            m = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-        m[9] += dx
-        m[10] += dy
-        m[11] += dz
-        joined = " ".join(f"{v:g}" for v in m)
-        return f'<item {head.strip()} transform="{joined}"/>'
+    # Bake the move into the coordinates rather than into the <item> transform.
+    #
+    # Writing a translation into the build item is the tidier edit and it is
+    # what this did first. Bambu rejected the result with "One of the plate is
+    # empty or has no object fully inside it" for a model whose transformed
+    # bounding box sits comfortably inside the bed, so its containment test and
+    # its placement do not agree about that matrix. Baked coordinates take the
+    # disagreement away: the numbers in the file are bed coordinates, nothing
+    # has to be composed to know where the object lands, and the result can be
+    # checked by reading the vertices back -- which ``verify_on_bed`` does.
+    def move(match: re.Match) -> str:
+        x, y, z = (float(match.group(i)) for i in (1, 2, 3))
+        return f'<vertex x="{x + dx:g}" y="{y + dy:g}" z="{z + dz:g}"/>'
 
     model = re.sub(
-        r'<item ((?:(?!transform=)[^>])*)(?:transform="([^"]*)")?\s*/>', shift, model
+        r'<vertex x="([-0-9.eE]+)" y="([-0-9.eE]+)" z="([-0-9.eE]+)"\s*/>',
+        move,
+        model,
     )
+    # Any transform left over from an earlier pass would now be applied on top
+    # of coordinates that already include it, moving the object twice.
+    model = re.sub(r'(<item [^>]*?)\s*transform="[^"]*"', r"\1", model)
     # A malformed rewrite here reads as "input model file can not be parsed"
     # from the slicer, with no hint which file or why -- so check it now.
     try:
@@ -141,7 +148,55 @@ def center_on_bed(threemf: Path, nozzle: float = profiles.DEFAULT_NOZZLE) -> Pat
     with zipfile.ZipFile(threemf, "w", zipfile.ZIP_DEFLATED) as zout:
         for name, data in members.items():
             zout.writestr(name, data)
+    verify_on_bed(threemf, nozzle)
     return threemf
+
+
+def bed_extent(threemf: Path) -> tuple[float, float, float, float, float, float]:
+    """Where the model actually sits, read back out of the written file.
+
+    Only meaningful because ``center_on_bed`` bakes position into the
+    coordinates: with a build-item transform these numbers would be the
+    object's local frame and say nothing about the bed.
+    """
+    with zipfile.ZipFile(threemf) as zin:
+        model = zin.read("3D/3dmodel.model").decode()
+    axes = []
+    for pattern in (
+        r'<vertex x="([-0-9.eE]+)"',
+        r'<vertex[^>]*\sy="([-0-9.eE]+)"',
+        r'<vertex[^>]*\sz="([-0-9.eE]+)"',
+    ):
+        found = [float(v) for v in re.findall(pattern, model)]
+        if not found:
+            raise SliceError(f"no vertices found in {threemf}")
+        axes.append((min(found), max(found)))
+    return (*axes[0], *axes[1], *axes[2])
+
+
+def verify_on_bed(
+    threemf: Path, nozzle: float = profiles.DEFAULT_NOZZLE, margin: float = 1.0
+) -> None:
+    """Fail here rather than letting the slicer fail vaguely later.
+
+    Bambu's way of saying a model is off the plate is "One of the plate is
+    empty or has no object fully inside it", which names neither the object nor
+    the axis and reads like a problem with the plate list. Checking the written
+    coordinates turns that into a sentence with numbers in it.
+    """
+    mach = profiles.machine(nozzle)
+    x0, x1, y0, y1, z0, z1 = bed_extent(threemf)
+    for axis, lo, hi, limit in (
+        ("x", x0, x1, mach.bed_x),
+        ("y", y0, y1, mach.bed_y),
+        ("z", z0, z1, mach.height),
+    ):
+        if lo < -margin or hi > limit + margin:
+            raise SliceError(
+                f"{threemf.name} is off the plate on {axis}: {lo:.1f}..{hi:.1f}mm "
+                f"against a 0..{limit:.0f}mm bed. The slicer would report this as "
+                f"an empty plate."
+            )
 
 
 @dataclass(frozen=True)
