@@ -232,6 +232,20 @@ def export(params: Params, out: Path, nozzle: float = 0.4) -> dict:
     return {"stl": stl, "project": project, "filament": asa}
 
 
+def slice_it(params: Params, out: Path, nozzle: float = 0.4):
+    """Slice with the ASA presets and this part's settings actually applied."""
+    from p2s import slicer
+
+    asa = inventory.default("ASA").preset_for(nozzle)
+    return slicer.slice_project(
+        out / "mustang_badge.3mf",
+        out / "sliced",
+        nozzle=nozzle,
+        filament=asa,
+        overrides=SLICE,
+    )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--font", help="installed family name")
@@ -244,6 +258,7 @@ def main() -> None:
                     help="gap under a straightedge across the badge; 0 = flat")
     ap.add_argument("--out", type=Path, default=Path("out"))
     ap.add_argument("--export", action="store_true", help="also write STL + 3mf")
+    ap.add_argument("--slice", action="store_true", help="export, then slice it")
     args = ap.parse_args()
 
     params = Params(
@@ -261,7 +276,7 @@ def main() -> None:
 
     png = render(params, args.out / "mustang_badge_preview.png")
     print("wrote", png)
-    if args.export:
+    if args.export or args.slice:
         made = export(params, args.out)
         print("wrote", made["stl"])
         print("wrote", made["project"], f"({made['filament']})")
@@ -269,6 +284,10 @@ def main() -> None:
         box = part.bounding_box()
         fits = machine.fits((box.size.X, box.size.Y, box.size.Z))
         print(f"  fits the {machine.bed_x:.0f}×{machine.bed_y:.0f} bed: {fits}")
+    if args.slice:
+        result = slice_it(params, args.out)
+        print("sliced", result.output)
+        print(f"  {result.summary()}")
 
 
 if __name__ == "__main__":
