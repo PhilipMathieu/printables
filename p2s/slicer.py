@@ -83,14 +83,124 @@ def write_project(
         mesher.write(str(mesh_only))
 
     cfg = project_config(nozzle, process, filament)
-    with zipfile.ZipFile(mesh_only) as zin, zipfile.ZipFile(
-        dest, "w", zipfile.ZIP_DEFLATED
-    ) as zout:
-        for item in zin.infolist():
-            zout.writestr(item, zin.read(item.filename))
-        zout.writestr("Metadata/project_settings.config", json.dumps(cfg, indent=1))
+    with zipfile.ZipFile(mesh_only) as zin:
+        members = {i.filename: zin.read(i.filename) for i in zin.infolist()}
     mesh_only.unlink()
+
+    model, model_settings = as_bambu_project(
+        members["3D/3dmodel.model"].decode(), dest.stem
+    )
+    members["3D/3dmodel.model"] = model.encode()
+    members["Metadata/project_settings.config"] = json.dumps(cfg, indent=1).encode()
+    members["Metadata/model_settings.config"] = model_settings.encode()
+    members["Metadata/slice_info.config"] = SLICE_INFO.encode()
+
+    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zout:
+        for name, data in members.items():
+            zout.writestr(name, data)
     return center_on_bed(dest, nozzle)
+
+
+SLICE_INFO = """<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <header>
+    <header_item key="X-BBL-Client-Type" value="slicer"/>
+    <header_item key="X-BBL-Client-Version" value="01.07.03.04"/>
+  </header>
+</config>
+"""
+"""Copied verbatim from Bambu's own calib/pressure_advance/pa_pattern.3mf.
+
+The version is theirs, not the installed build's, and deliberately so: this
+file cannot be tested from a sandboxed session, so the fewer characters that
+differ from one Studio is known to open, the fewer places a guess can be wrong.
+"""
+
+
+def as_bambu_project(model: str, name: str) -> tuple[str, str]:
+    """Turn a bare 3mf model into one Bambu will treat as a project.
+
+    A 3mf that build123d's Mesher writes is a valid 3mf and Bambu still refuses
+    to slice it, with "One of the plate is empty or has no object fully inside
+    it" -- a message about plates for a file that never mentions plates. There
+    is no plate list in it at all, so every plate Studio makes is empty and it
+    reports the symptom rather than the cause. Studio 02.07 tolerated this;
+    02.08 does not, which is why files sliced in August stopped slicing.
+
+    Bambu's own bundled projects show what is missing. Three differences from
+    what Mesher writes, all read off calib/pressure_advance/pa_pattern.3mf:
+
+    1. ``Metadata/model_settings.config``, whose ``<plate>`` binds an object to
+       plate 1 by id. This is the one the error message is actually about.
+    2. The build ``<item>`` points at the wrapper object -- the one holding
+       ``<components>`` -- not at the mesh object the wrapper references.
+       Mesher points it straight at the mesh, so the id in the build and the id
+       Bambu expects to find in a plate are different objects.
+    3. ``printable="1"`` on the item. An unprintable object is exactly an
+       object that is not on a plate, which is the reported symptom again.
+
+    Returns the rewritten model XML and the model_settings.config to sit
+    beside it.
+    """
+    # Which wrapper stands in front of which mesh. Mesher emits them in pairs,
+    # a mesh object and a components object that references it.
+    wrapper_of: dict[str, str] = {}
+    for match in re.finditer(r'<object id="(\d+)"[^>]*>(.*?)</object>', model, re.S):
+        wrapper_id, body = match.group(1), match.group(2)
+        for ref in re.finditer(r'<component[^>]*\sobjectid="(\d+)"', body):
+            wrapper_of[ref.group(1)] = wrapper_id
+
+    instances: list[str] = []
+
+    def retarget(match: re.Match) -> str:
+        attrs = match.group(1)
+        current = re.search(r'objectid="(\d+)"', attrs)
+        if not current:
+            return match.group(0)
+        target = wrapper_of.get(current.group(1), current.group(1))
+        attrs = re.sub(r'objectid="\d+"', f'objectid="{target}"', attrs, count=1)
+        if "printable=" not in attrs:
+            attrs = f'{attrs.rstrip()} printable="1"'
+        instances.append(target)
+        return f"<item {attrs}/>"
+
+    model = re.sub(r"<item ([^>]*?)\s*/>", retarget, model)
+    if not instances:
+        raise SliceError("no build items in the 3mf, so nothing can be put on a plate")
+
+    objects = "\n".join(
+        f'  <object id="{oid}">\n'
+        f'    <metadata key="name" value="{name}"/>\n'
+        f'    <metadata key="extruder" value="1"/>\n'
+        f'    <part id="1" subtype="normal_part">\n'
+        f'      <metadata key="name" value="{name}"/>\n'
+        f'      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>\n'
+        f"    </part>\n"
+        f"  </object>"
+        for oid in dict.fromkeys(instances)
+    )
+    # Every instance goes on plate 1. Nothing here builds multi-plate projects,
+    # and an extra empty plate is the very thing the slicer refuses.
+    placements = "\n".join(
+        f"    <model_instance>\n"
+        f'      <metadata key="object_id" value="{oid}"/>\n'
+        f'      <metadata key="instance_id" value="{i}"/>\n'
+        f"    </model_instance>"
+        for i, oid in enumerate(instances)
+    )
+    settings = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<config>\n"
+        f"{objects}\n"
+        "  <plate>\n"
+        '    <metadata key="plater_id" value="1"/>\n'
+        '    <metadata key="plater_name" value=""/>\n'
+        '    <metadata key="locked" value="false"/>\n'
+        f"{placements}\n"
+        "  </plate>\n"
+        "</config>\n"
+    )
+    return model, settings
 
 
 def center_on_bed(threemf: Path, nozzle: float = profiles.DEFAULT_NOZZLE) -> Path:

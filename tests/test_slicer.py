@@ -60,6 +60,55 @@ def test_verify_accepts_a_centred_model(project):
     slicer.verify_on_bed(project)
 
 
+# --- what makes it a project rather than just a model ----------------------
+#
+# Checked against Bambu's own calib/pressure_advance/pa_pattern.3mf. Studio
+# 02.07 sliced a bare Mesher 3mf; 02.08 refuses it with "One of the plate is
+# empty or has no object fully inside it" -- a complaint about plates from a
+# file that never mentions plates.
+
+
+def test_it_carries_the_metadata_a_project_needs(project):
+    members = set(zipfile.ZipFile(project).namelist())
+    assert "Metadata/project_settings.config" in members
+    assert "Metadata/model_settings.config" in members
+    assert "Metadata/slice_info.config" in members
+
+
+def test_an_object_is_bound_to_plate_one(project):
+    """The binding the error message is actually about."""
+    settings = zipfile.ZipFile(project).read("Metadata/model_settings.config").decode()
+    assert '<metadata key="plater_id" value="1"/>' in settings
+    bound = re.findall(r'<metadata key="object_id" value="(\d+)"/>', settings)
+    assert bound, "no object placed on the plate"
+
+    model = zipfile.ZipFile(project).read("3D/3dmodel.model").decode()
+    built = re.findall(r'<item [^>]*objectid="(\d+)"', model)
+    assert sorted(built) == sorted(bound), "build items and plate disagree"
+
+
+def test_the_build_item_points_at_the_wrapper_not_the_mesh(project):
+    """Mesher points it straight at the mesh object, so the id in the build and
+    the id Bambu expects to find on a plate are two different objects."""
+    model = zipfile.ZipFile(project).read("3D/3dmodel.model").decode()
+    target = re.search(r'<item [^>]*objectid="(\d+)"', model).group(1)
+    body = re.search(
+        rf'<object id="{target}"[^>]*>(.*?)</object>', model, re.S
+    ).group(1)
+    assert "<components>" in body
+
+
+def test_the_item_is_marked_printable(project):
+    """An unprintable object is precisely an object not on a plate."""
+    model = zipfile.ZipFile(project).read("3D/3dmodel.model").decode()
+    assert re.search(r'<item [^>]*printable="1"', model)
+
+
+def test_a_model_with_no_build_items_is_refused():
+    with pytest.raises(slicer.SliceError, match="no build items"):
+        slicer.as_bambu_project("<model><resources/><build/></model>", "x")
+
+
 def test_verify_rejects_a_model_off_the_plate(project, tmp_path):
     """The check earns its place only if it actually fails on a bad file."""
     off = tmp_path / "off.3mf"
