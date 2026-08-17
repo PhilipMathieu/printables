@@ -90,7 +90,39 @@ def as_filament_value(existing, value: str) -> list:
     return [value]
 
 
-_START_TEMP = re.compile(r"^(M10[49]\s+S)(\d+)", re.M)
+# Leading whitespace is not optional to allow for: the real start sequence puts
+# its temperature commands inside conditional blocks, indented. Anchoring hard
+# to the line start finds none of them and reports a file that heats to 270C
+# three times as having no temperature command at all.
+_START_TEMP = re.compile(r"^([ \t]*M10[49]\s+S)(\d+)", re.M)
+
+MACHINE_GCODE = Path(__file__).parent / "gcode"
+"""Real start/end sequences for the printer, captured from the GUI.
+
+WHY THESE ARE VENDORED. The start sequence for a P-series printer is not in
+Bambu's shipped profile tree. ``machine_start_gcode`` is unset on the P2S
+preset and on ``fdm_bbl_3dp_001_common``, so it resolves up to
+``fdm_machine_common`` -- a 577-character placeholder, byte-identical across
+BBL, Creality, Voron, Tronxy and Geeetech, containing an Ender-style purge
+line, a move to the centre of a 220mm bed, and a hardcoded ``M109 S205``.
+Slicing against it produced gcode that ran the whole print at 205C.
+
+The real thing is 382 lines and templates its temperatures properly. It also
+warms to 140C and 170C at specific points for bed levelling, which is why the
+literal temperatures in it must NOT be rewritten. It was obtained the only way
+available: slicing in the GUI, exporting the job, and reading
+``Metadata/project_settings.config`` out of the .gcode.3mf.
+
+Captured 2026-08-16 from Bambu Studio 02.08.02.60, P2S 0.4 nozzle. If Studio
+changes its start sequence in an update these go stale, and the way to refresh
+them is the same export.
+"""
+
+
+def machine_gcode(kind: str) -> str | None:
+    """Vendored start/end gcode, or None if it was never captured."""
+    path = MACHINE_GCODE / f"bambu_p2s_{kind}.gcode"
+    return path.read_text() if path.is_file() else None
 
 
 def initial_temperature(filament: str) -> int:
@@ -132,7 +164,15 @@ def fix_start_temperature(start_gcode: str, target: int) -> str:
     So the temperature is substituted here as a literal, from the filament
     preset, rather than as a template placeholder -- a placeholder would just be
     one more thing that can silently fail to expand.
+
+    Start gcode that already templates its temperature is left completely
+    alone. The real sequence warms deliberately to 140C and 170C at points
+    during bed levelling, and rewriting those to the printing temperature would
+    have the nozzle oozing at 270C while it probes the plate -- a worse bug
+    than the one this fixes.
     """
+    if "nozzle_temperature" in start_gcode:
+        return start_gcode
     return _START_TEMP.sub(lambda m: f"{m.group(1)}{target}", start_gcode)
 
 
@@ -207,10 +247,18 @@ def preset_files(
         cfg["from"] = "system"
         cfg["is_custom_defined"] = "0"
         cfg.update(extra)
-        if kind == "machine" and cfg.get("machine_start_gcode"):
-            cfg["machine_start_gcode"] = fix_start_temperature(
-                cfg["machine_start_gcode"], hot
-            )
+        if kind == "machine":
+            # Prefer the real sequence over the inherited placeholder; fall back
+            # to patching the placeholder's temperature if it was never captured.
+            for which, key in (("start", "machine_start_gcode"),
+                               ("end", "machine_end_gcode")):
+                real = machine_gcode(which)
+                if real:
+                    cfg[key] = real
+            if cfg.get("machine_start_gcode"):
+                cfg["machine_start_gcode"] = fix_start_temperature(
+                    cfg["machine_start_gcode"], hot
+                )
         if kind == "filament":
             for key, value in fan.items():
                 cfg[key] = as_filament_value(cfg.get(key), value)

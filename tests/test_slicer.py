@@ -193,6 +193,46 @@ def test_an_unknown_filament_key_still_gets_a_list(tmp_path):
 # print: ASA extruded at 205C does not stick to anything.
 
 
+def test_the_real_start_sequence_is_used_not_the_placeholder(tmp_path):
+    """Bambu's profile tree has no P-series start gcode; the inherited
+    fdm_machine_common is a 577-char placeholder with an Ender purge line, a
+    220mm bed centre and M109 S205. The real one is vendored from a GUI export."""
+    real = slicer.machine_gcode("start")
+    assert real and len(real.splitlines()) > 100, "start gcode was never captured"
+
+    machine, _, _ = slicer.preset_files(
+        tmp_path, 0.4, profiles.machine(0.4).default_process,
+        inventory.default("ASA").preset_for(0.4),
+    )
+    written = json.loads(machine.read_text())["machine_start_gcode"]
+    assert written == real
+    assert "Draw the first line" not in written, "the Ender purge line came back"
+    assert "X110 Y110" not in written, "the 220mm bed centre came back"
+
+
+def test_the_real_sequence_templates_its_own_temperature():
+    """Which is why it must not be rewritten -- see the next test."""
+    assert "nozzle_temperature" in slicer.machine_gcode("start")
+
+
+def test_templated_start_gcode_is_left_alone():
+    """It warms to 140C and 170C deliberately during bed levelling. Rewriting
+    those to the printing temperature would have the nozzle oozing at 270C
+    while it probes the plate -- worse than the bug being fixed."""
+    real = slicer.machine_gcode("start")
+    assert slicer.fix_start_temperature(real, 270) == real
+
+
+def test_indented_temperature_commands_are_seen(tmp_path):
+    """The real sequence indents its commands inside conditional blocks. An
+    anchor of ^M109 finds none of them and calls a file that heats to 270C
+    three times "no temperature command at all"."""
+    asa = inventory.default("ASA").preset_for(0.4)
+    g = tmp_path / "indented.gcode"
+    g.write_text("M190 S100\n    M1002 gcode_claim_action : 8\n    M109 S270\n")
+    slicer.verify_gcode(g, asa)
+
+
 def test_a_hardcoded_start_temperature_is_rewritten():
     stub = "G28\nM190 S100\nM109 S205;\nG1 Z5\n"
     assert "M109 S270;" in slicer.fix_start_temperature(stub, 270)
@@ -205,32 +245,31 @@ def test_rewriting_leaves_everything_else_alone():
     assert "G1 X205.5 Y10" in out, "a coordinate that looks like a temperature"
 
 
-def test_the_machine_preset_is_written_at_the_filament_temperature(tmp_path):
-    """The stub lives in machine_start_gcode, inherited from a
-    fdm_machine_common that twelve vendors define, so it can even be another
-    manufacturer's warm-up line."""
-    asa = inventory.default("ASA").preset_for(0.4)
-    machine, _, _ = slicer.preset_files(
-        tmp_path, 0.4, profiles.machine(0.4).default_process, asa,
-    )
-    start = json.loads(machine.read_text())["machine_start_gcode"]
-    want = slicer.initial_temperature(asa)
-    assert f"M109 S{want}" in start
-    assert "M109 S205" not in start
-
-
-def test_asa_and_pla_get_different_start_temperatures(tmp_path):
-    """Proof the number is read from the filament rather than pinned."""
-    temps = []
+def test_the_written_preset_never_carries_the_placeholder_temperature(tmp_path):
+    """Whichever route is taken -- the real templated sequence, or a patched
+    stub -- what must never survive is a literal 205."""
     for material in ("ASA", "PLA"):
-        preset = inventory.default(material).preset_for(0.4)
         machine, _, _ = slicer.preset_files(
             tmp_path / material, 0.4, profiles.machine(0.4).default_process,
-            preset, bed=slicer.DEFAULT_BED,
+            inventory.default(material).preset_for(0.4),
         )
         start = json.loads(machine.read_text())["machine_start_gcode"]
-        temps.append(re.search(r"M109 S(\d+)", start).group(1))
-    assert temps[0] != temps[1], f"both materials got {temps[0]}C"
+        assert "M109 S205" not in start
+
+
+def test_the_patched_stub_follows_the_filament(tmp_path):
+    """The fallback path, for a machine whose real sequence was never captured.
+    Proof the number is read from the filament rather than pinned."""
+    stub = "G28\nM109 S205;\n"
+    temps = {
+        material: slicer.fix_start_temperature(
+            stub, slicer.initial_temperature(
+                inventory.default(material).preset_for(0.4)
+            )
+        )
+        for material in ("ASA", "PLA")
+    }
+    assert temps["ASA"] != temps["PLA"], f"both materials got {temps['ASA']!r}"
 
 
 def test_verify_rejects_the_wrong_temperature(tmp_path):
@@ -327,17 +366,19 @@ def test_it_actually_slices(project, tmp_path):
     assert result.minutes and result.minutes > 0
     assert result.grams and result.grams > 0
 
-    head = result.output.read_text(errors="ignore")[:20000]
-    assert "; filament_type = ASA" in head, "sliced as the wrong material"
-    assert "; printer_model = Bambu Lab P2S" in head
-    assert "; brim_type = outer_only" in head, "override did not apply"
-
-    # The header agreeing with itself proves nothing -- read the commands.
+    # Not a fixed window: the real start sequence is 382 lines and the header
+    # echoes it, which pushed printer_model past a 20000-character slice.
     body = result.output.read_text(errors="ignore")
-    hot = {int(m) for m in re.findall(r"^M109 S(\d+)", body, re.M)} - {0}
-    assert hot == {slicer.initial_temperature(
-        inventory.default("ASA").preset_for(0.4)
-    )}, f"nozzle commanded to {hot}"
+    assert "; filament_type = ASA" in body, "sliced as the wrong material"
+    assert "; printer_model = Bambu Lab P2S" in body
+    assert "; brim_type = outer_only" in body, "override did not apply"
+
+    # The header agreeing with itself proves nothing -- read the commands. The
+    # module's own pattern, because it tolerates the indentation the real
+    # sequence uses; 140C and 170C also appear, deliberately, for bed levelling.
+    hot = {int(m.group(2)) for m in slicer._START_TEMP.finditer(body)}
+    want = slicer.initial_temperature(inventory.default("ASA").preset_for(0.4))
+    assert want in hot, f"nozzle never commanded to {want}; saw {sorted(hot)}"
 
 
 def test_verify_rejects_a_model_off_the_plate(project, tmp_path):
