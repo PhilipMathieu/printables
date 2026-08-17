@@ -31,19 +31,36 @@ TAPE = "#c8792b"
 INK = "#20252b"
 RULE = "#7c858d"
 
-# The script is ONE island from the plate to the top face, unlike the MUSTANG
-# badge, so the clumping detector that stopped that print twice has nothing to
-# be confused by here. Settings otherwise as established for ASA.
+# PRINTED 2026-08-17 and these are the settings that did it, not a guess.
+#
+# The badge printed almost perfectly from a GUI slice of Studio's stock
+# 0.20mm Standard with ironing switched on, so these now match that rather than
+# the heavier defaults carried over from the MUSTANG badge. What changed, and
+# why the earlier values are gone:
+#
+#   - NO BRIM. The MUSTANG settings asked for 12mm fused at zero gap, which was
+#     never printed and never needed: both badges held to the textured plate
+#     with no brim at all, four prints between them. It cost ten minutes a
+#     print to insure against something that has not happened.
+#   - 2 walls and 15% infill, not 3 and 25%. This is a 4mm slab; the extra
+#     material bought nothing visible.
+#   - monotonicline, not monotonic. Studio's current default, and better tuned.
+#   - reduce_crossing_wall off. It was added for the MUSTANG's island-hopping
+#     and this part is one island.
+#
+# The script is ONE island from the plate to the top face, so the clumping
+# detector that stopped the MUSTANG twice has far less to misread here. Turn it
+# off on the PRINTER regardless: a GUI-sliced job embeds the routine even with
+# enable_wrapping_detection = 0, so the file's setting does not decide.
 SLICE = {
-    "brim_type": "outer_only",
-    "brim_width": "12",
-    "brim_object_gap": "0",
-    "reduce_crossing_wall": "1",
     "enable_support": "0",
-    "wall_loops": "3",
-    "sparse_infill_density": "25%",
-    "top_surface_pattern": "monotonic",
     "ironing_type": "top",
+    # 0.21mm is the stock inset and it leaves a slight ridge where ironing meets
+    # the perimeter: the pass runs just inside the wall at 10% flow and pushes
+    # melt outward against it. Holding off further keeps the same flat faces
+    # without piling material on the boundary. Reported as "a tiny bit rough on
+    # the edges where the ironing meets the wall" on the first print.
+    "ironing_inset": "0.4",
 }
 
 COOLING = {

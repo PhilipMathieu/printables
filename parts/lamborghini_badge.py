@@ -56,6 +56,23 @@ rather than PLA; loaded in shear on a vertical panel, which is the mode a
 pressure-sensitive adhesive is strongest in, so the real questions are heat,
 airflow and surface prep rather than bond area. Use a proper automotive
 attachment tape and clean the paint with isopropyl first.
+
+PRINTED 2026-08-17, first attempt, and it came out almost perfect. Two marks
+left, both characteristic of the process rather than of this design:
+
+  - a slight ridge where the ironing pass meets the perimeter. Ironing runs
+    0.21mm inside the wall by default, at 10% flow, so it drags melt outward and
+    piles it against the boundary. ``ironing_inset`` in the tool's SLICE is
+    raised to hold the pass further off.
+  - visible layer lines on the flanks. Unavoidable here: the bevel is a
+    staircase of 0.2mm steps by construction, and the flanks are that staircase.
+    A finer layer height would soften it at the cost of print time; nothing
+    about the geometry can.
+
+Worth knowing what the print settles: the badge held to the textured plate with
+NO BRIM, which together with the MUSTANG's three brimless prints is enough to
+stop asking for one. The tool's slice settings now match what actually printed
+rather than the heavier defaults inherited from the MUSTANG badge.
 """
 
 from __future__ import annotations
