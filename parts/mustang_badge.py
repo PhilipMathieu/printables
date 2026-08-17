@@ -104,6 +104,32 @@ Set to 150mm the default lands near 19.5mm caps, 7.7:1 -- which is the other
 reason to believe it. A badge is a wide, short object, and a normal-width serif
 at badge width falls straight into that proportion where a text sans does not.
 
+PRINTED 2026-08-16, third attempt. The two failures before it were not print
+problems at all, and the reason is worth writing down because it is invisible
+from the model: the printer's CLUMPING DETECTOR stopped both of them, on layer
+10 each time.
+
+That routine fires on layers 3, 10 and 19 only (``wrapping_detection_gcode``,
+"P2S 20250822 clumping"). The bar ends at layer 8, so layer 9 is where this
+badge stops being one connected shape and becomes seven separate islands --
+and layer 10 asks a detector that looks for material clumped on the head to
+interpret exactly that transition, two layers after it happens. Both prints
+died there, one reported as spaghetti and one as "filament stuck on the print
+head", with the part firmly stuck down, the nozzle clear, and the quality
+perfect up to the stop.
+
+So: turn the clumping check OFF for this part. Any design that goes from one
+island to many partway up will provoke it, which covers raised lettering on a
+rail generally. It is not a reason to change the geometry. Note also that the
+gcode already carries ``M1015.3 S0 ;disable clog detect`` and the exported job
+had ``enable_wrapping_detection = 0`` -- the printer-side setting overrides
+both, so it has to be switched off on the printer.
+
+The successful print was a GUI slice: no brim (``auto_brim`` chose none), 2
+walls, 15% infill, no ironing, fan off, 23 min, 5.1g. Worth knowing that the
+brim this module asks for has still never been printed, and that the part held
+to the plate without one three times.
+
 FLAT PANEL, BUT NOT NECESSARILY. ``sag`` cuts a cylindrical hollow into the back
 for a panel that crowns across the badge's length. It defaults to zero because
 this one is going on a flat tailgate. If the finished badge rocks when you offer
