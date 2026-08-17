@@ -156,6 +156,36 @@ def test_overrides_land_on_the_process(tmp_path):
     assert json.loads(process.read_text())["brim_type"] == "outer_only"
 
 
+def test_filament_overrides_land_on_the_filament(tmp_path):
+    """Cooling is a filament setting. Sent through ``overrides`` it would be
+    written to the process, where nothing reads it and nothing complains --
+    so the two are separate arguments and this checks they stay separate."""
+    _, process, filament = slicer.preset_files(
+        tmp_path, 0.4, profiles.machine(0.4).default_process,
+        inventory.default("ASA").preset_for(0.4),
+        filament_overrides={"fan_max_speed": "0"},
+    )
+    assert json.loads(filament.read_text())["fan_max_speed"] == ["0"]
+    assert "fan_max_speed" not in json.loads(process.read_text())
+
+
+def test_a_filament_override_keeps_the_per_extruder_shape(tmp_path):
+    """Filament values are lists even with one extruder, and a bare string is
+    ignored rather than refused. nozzle_temperature carries one entry per slot,
+    so the length has to be matched rather than assumed to be one."""
+    name = inventory.default("ASA").preset_for(0.4)
+    before = profiles.resolve("filament", name)["nozzle_temperature"]
+    _, _, filament = slicer.preset_files(
+        tmp_path, 0.4, profiles.machine(0.4).default_process, name,
+        filament_overrides={"nozzle_temperature": "265"},
+    )
+    assert json.loads(filament.read_text())["nozzle_temperature"] == ["265"] * len(before)
+
+
+def test_an_unknown_filament_key_still_gets_a_list(tmp_path):
+    assert slicer.as_filament_value(None, "0") == ["0"]
+
+
 def test_the_bed_type_is_stated(tmp_path):
     """Nothing in the presets sets it, and the default is Cool Plate."""
     machine, process, _ = slicer.preset_files(

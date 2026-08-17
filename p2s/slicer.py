@@ -75,6 +75,21 @@ COOL_PLATE_ONLY = {"PLA", "PVA", "TPU"}
 picking wrong is a validation failure rather than a warning."""
 
 
+def as_filament_value(existing, value: str) -> list:
+    """Shape a filament override the way filament presets store values.
+
+    Filament settings are per-extruder lists even when there is one extruder:
+    ``"fan_max_speed": ["35"]``, and ``nozzle_temperature`` carries one entry
+    per slot. Writing a bare string where Studio expects a list gets the key
+    ignored, silently, which is the failure mode this whole module exists to
+    avoid. So match the length already there, and fall back to a single entry
+    for a key the preset does not carry.
+    """
+    if isinstance(existing, list) and existing:
+        return [value] * len(existing)
+    return [value]
+
+
 def preset_files(
     dest: Path,
     nozzle: float,
@@ -83,6 +98,7 @@ def preset_files(
     *,
     bed: str = DEFAULT_BED,
     overrides: dict | None = None,
+    filament_overrides: dict | None = None,
 ) -> tuple[Path, Path, Path]:
     """Write resolved machine/process/filament presets for ``--load-settings``.
 
@@ -95,9 +111,15 @@ def preset_files(
     ``overrides`` land on the process, which is where the per-part settings a
     stock preset knows nothing about belong -- a brim under a part with a thin
     first layer, say. They are last, so they win.
+
+    ``filament_overrides`` are separate because cooling lives on the filament,
+    not the process: ``close_fan_the_first_x_layers``, ``fan_max_speed`` and
+    friends are all filament keys. Putting them in ``overrides`` writes them to
+    the process, where nothing reads them and nothing complains.
     """
     dest.mkdir(parents=True, exist_ok=True)
     written = []
+    fan = filament_overrides or {}
     for kind, name, extra in (
         ("machine", profiles.machine(nozzle).preset, {"curr_bed_type": bed}),
         ("process", process, {"curr_bed_type": bed, **(overrides or {})}),
@@ -112,6 +134,9 @@ def preset_files(
         cfg["from"] = "system"
         cfg["is_custom_defined"] = "0"
         cfg.update(extra)
+        if kind == "filament":
+            for key, value in fan.items():
+                cfg[key] = as_filament_value(cfg.get(key), value)
         path = dest / f"{kind}.json"
         path.write_text(json.dumps(cfg, indent=1))
         written.append(path)
@@ -494,6 +519,7 @@ def slice_project(
     filament: str | None = None,
     bed: str = DEFAULT_BED,
     overrides: dict | None = None,
+    filament_overrides: dict | None = None,
 ) -> SliceResult:
     """Slice a project 3mf with real presets, and read the estimates back."""
     process = process or profiles.machine(nozzle).default_process
@@ -504,7 +530,8 @@ def slice_project(
     outdir = Path(outdir or project.parent / "sliced").resolve()
     outdir.mkdir(parents=True, exist_ok=True)
     machine_json, process_json, filament_json = preset_files(
-        outdir / "presets", nozzle, process, filament, bed=bed, overrides=overrides
+        outdir / "presets", nozzle, process, filament, bed=bed,
+        overrides=overrides, filament_overrides=filament_overrides,
     )
     # The binary, not `open`. Slicing a 3mf needs nothing from the GUI session,
     # so this works from a sandbox; only STL loading and --export-3mf still
