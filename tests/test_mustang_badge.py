@@ -405,3 +405,31 @@ def test_a_brim_is_specified():
     from tools.mustang_badge import SLICE
 
     assert float(SLICE["brim_width"]) >= 5
+
+
+def test_the_brim_is_fused_to_the_part():
+    """A gap makes the brim easy to remove, which is the opposite of what a
+    150mm ASA part needs from it."""
+    from tools.mustang_badge import SLICE
+
+    assert float(SLICE["brim_object_gap"]) == 0
+
+
+def test_the_part_cooling_fan_is_off():
+    """The first print failed two layers after the bar finished, with the fan
+    ramping up exactly at that layer while the part was at its least stiff and
+    most stressed. Nothing in this part needs cooling: no bridges, no
+    overhangs, and layer times over a minute."""
+    from tools.mustang_badge import COOLING
+
+    assert COOLING["fan_min_speed"] == "0"
+    assert COOLING["fan_max_speed"] == "0"
+
+
+def test_cooling_is_kept_out_of_the_process_overrides():
+    """The two dicts go to different presets. Mixing them writes cooling keys
+    where nothing reads them, and it fails silently."""
+    from tools.mustang_badge import COOLING, SLICE
+
+    assert not set(COOLING) & set(SLICE)
+    assert not any(key.endswith("fan_speed") for key in SLICE)

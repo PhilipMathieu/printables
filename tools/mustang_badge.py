@@ -41,12 +41,50 @@ RULE = "#7c858d"
 # the part it belongs to so the settings travel with the design.
 SLICE = {
     "brim_type": "outer_only",
-    "brim_width": "6",
+    # 12mm, not the 6mm that failed. See COOLING for what went wrong; the brim
+    # is the other half of the answer, and on a part 150mm long the anchor at
+    # the two ends is what the whole print rests on.
+    "brim_width": "12",
+    # No gap: the brim has to be fused to the part to hold it down. 0.1mm makes
+    # it easier to snap off, which is the opposite of what is wanted here.
+    "brim_object_gap": "0",
+    # Above the bar the badge is seven separate islands on every layer, so the
+    # nozzle spends the back half of the print hopping between letters. Left to
+    # itself it takes the straight line, dragging across letters it has already
+    # printed; ASA oozes and strings, and that is how material ends up welded to
+    # the hotend. Routing travel around walls is cheap insurance.
+    "reduce_crossing_wall": "1",
     "enable_support": "0",
     "wall_loops": "3",
     "sparse_infill_density": "25%",
     "top_surface_pattern": "monotonic",
     "ironing_type": "top",
+}
+
+# Cooling lives on the FILAMENT preset, not the process -- put these in SLICE
+# and they are written somewhere nothing reads them.
+#
+# WHY THE FAN IS OFF. The first print of this badge failed with spaghetti two
+# layers after the bar finished, and the fan schedule explains the timing.
+# Layers 1-8 are the full silhouette: a 150 x 21 x 1.6mm slab, which is the
+# worst shape ASA can be asked to hold flat -- long, thin, and with almost no
+# bending stiffness to resist its own contraction. The stock profile runs 25%
+# fan from layer 4, and at layer 9, exactly where the bar ends and the section
+# gets smaller and quicker, its cooling logic ramps the fan UP to 27% and then
+# 29%. Peak contraction stress, minimum stiffness, and rising airflow, all at
+# the same layer. The ends curl, the nozzle catches one, the part comes off.
+#
+# Nothing here needs a fan: 20 layers, no bridges, no overhangs (every layer is
+# smaller than the one below by construction), and layer times average over a
+# minute, so the part has plenty of time to set on its own. Both speeds are
+# pinned to zero rather than just raising close_fan_the_first_x_layers, because
+# that would depend on the layer count and the layer count depends on
+# thickness.
+COOLING = {
+    "fan_min_speed": "0",
+    "fan_max_speed": "0",
+    "close_fan_the_first_x_layers": "5",
+    "overhang_fan_speed": "0",
 }
 
 
@@ -243,6 +281,7 @@ def slice_it(params: Params, out: Path, nozzle: float = 0.4):
         nozzle=nozzle,
         filament=asa,
         overrides=SLICE,
+        filament_overrides=COOLING,
     )
 
 
