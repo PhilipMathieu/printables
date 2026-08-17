@@ -186,6 +186,74 @@ def test_an_unknown_filament_key_still_gets_a_list(tmp_path):
     assert slicer.as_filament_value(None, "0") == ["0"]
 
 
+# --- the nozzle actually gets hot ------------------------------------------
+#
+# A gcode whose header says nozzle_temperature = 270 and whose only command is
+# M109 S205 looks correct in every check that reads the header. This one cost a
+# print: ASA extruded at 205C does not stick to anything.
+
+
+def test_a_hardcoded_start_temperature_is_rewritten():
+    stub = "G28\nM190 S100\nM109 S205;\nG1 Z5\n"
+    assert "M109 S270;" in slicer.fix_start_temperature(stub, 270)
+    assert "205" not in slicer.fix_start_temperature(stub, 270)
+
+
+def test_rewriting_leaves_everything_else_alone():
+    stub = "G28\nM109 S205;\nG1 X205.5 Y10\n"
+    out = slicer.fix_start_temperature(stub, 270)
+    assert "G1 X205.5 Y10" in out, "a coordinate that looks like a temperature"
+
+
+def test_the_machine_preset_is_written_at_the_filament_temperature(tmp_path):
+    """The stub lives in machine_start_gcode, inherited from a
+    fdm_machine_common that twelve vendors define, so it can even be another
+    manufacturer's warm-up line."""
+    asa = inventory.default("ASA").preset_for(0.4)
+    machine, _, _ = slicer.preset_files(
+        tmp_path, 0.4, profiles.machine(0.4).default_process, asa,
+    )
+    start = json.loads(machine.read_text())["machine_start_gcode"]
+    want = slicer.initial_temperature(asa)
+    assert f"M109 S{want}" in start
+    assert "M109 S205" not in start
+
+
+def test_asa_and_pla_get_different_start_temperatures(tmp_path):
+    """Proof the number is read from the filament rather than pinned."""
+    temps = []
+    for material in ("ASA", "PLA"):
+        preset = inventory.default(material).preset_for(0.4)
+        machine, _, _ = slicer.preset_files(
+            tmp_path / material, 0.4, profiles.machine(0.4).default_process,
+            preset, bed=slicer.DEFAULT_BED,
+        )
+        start = json.loads(machine.read_text())["machine_start_gcode"]
+        temps.append(re.search(r"M109 S(\d+)", start).group(1))
+    assert temps[0] != temps[1], f"both materials got {temps[0]}C"
+
+
+def test_verify_rejects_the_wrong_temperature(tmp_path):
+    bad = tmp_path / "bad.gcode"
+    bad.write_text("M190 S100\nM109 S205;\nG1 X1 Y1 E1\n")
+    with pytest.raises(slicer.SliceError, match="205"):
+        slicer.verify_gcode(bad, inventory.default("ASA").preset_for(0.4))
+
+
+def test_verify_rejects_a_gcode_that_never_heats_up(tmp_path):
+    cold = tmp_path / "cold.gcode"
+    cold.write_text("M190 S100\nG1 X1 Y1 E1\nM104 S0 ; turn off hotend\n")
+    with pytest.raises(slicer.SliceError, match="no nozzle temperature command"):
+        slicer.verify_gcode(cold, inventory.default("ASA").preset_for(0.4))
+
+
+def test_verify_accepts_the_right_temperature(tmp_path):
+    asa = inventory.default("ASA").preset_for(0.4)
+    good = tmp_path / "good.gcode"
+    good.write_text(f"M190 S100\nM109 S{slicer.initial_temperature(asa)};\n")
+    slicer.verify_gcode(good, asa)
+
+
 def test_the_bed_type_is_stated(tmp_path):
     """Nothing in the presets sets it, and the default is Cool Plate."""
     machine, process, _ = slicer.preset_files(
@@ -263,6 +331,13 @@ def test_it_actually_slices(project, tmp_path):
     assert "; filament_type = ASA" in head, "sliced as the wrong material"
     assert "; printer_model = Bambu Lab P2S" in head
     assert "; brim_type = outer_only" in head, "override did not apply"
+
+    # The header agreeing with itself proves nothing -- read the commands.
+    body = result.output.read_text(errors="ignore")
+    hot = {int(m) for m in re.findall(r"^M109 S(\d+)", body, re.M)} - {0}
+    assert hot == {slicer.initial_temperature(
+        inventory.default("ASA").preset_for(0.4)
+    )}, f"nozzle commanded to {hot}"
 
 
 def test_verify_rejects_a_model_off_the_plate(project, tmp_path):

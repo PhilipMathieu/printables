@@ -90,6 +90,78 @@ def as_filament_value(existing, value: str) -> list:
     return [value]
 
 
+_START_TEMP = re.compile(r"^(M10[49]\s+S)(\d+)", re.M)
+
+
+def initial_temperature(filament: str) -> int:
+    """The nozzle temperature the first layer is supposed to be laid at."""
+    value = profiles.resolve("filament", filament).get(
+        "nozzle_temperature_initial_layer"
+    )
+    if isinstance(value, list) and value:
+        return int(float(value[0]))
+    if value is not None:
+        return int(float(value))
+    raise SliceError(f"filament preset {filament!r} states no initial-layer temperature")
+
+
+def fix_start_temperature(start_gcode: str, target: int) -> str:
+    """Rewrite hardcoded nozzle temperatures in a machine's start gcode.
+
+    THIS IS NOT COSMETIC. ``machine_start_gcode`` is not set on the P2S preset
+    or on ``fdm_bbl_3dp_001_common``, so it resolves up to ``fdm_machine_common``
+    -- and BBL's copy of that file is a dead placeholder. It is byte-identical
+    to Creality's, Voron's, Tronxy's and Geeetech's copies of the same name: a
+    generic 577-character template with an Ender-style purge line at X10.1, a
+    move to X110 Y110 (the centre of a 220mm bed, not a 256mm one), and a
+    literal ``M109 S205``. It is not the P-series start sequence, and the GUI
+    plainly does not use it.
+
+    The name is also ambiguous -- twelve vendors define ``fdm_machine_common``,
+    several with different hardcoded temperatures -- so resolving ``inherits``
+    by name across the whole tree could pick up a different manufacturer's line
+    as well. That hazard is real but it is not what happened here; Bambu's own
+    file says 205 too.
+
+    The result was a gcode whose ONLY nozzle temperature command was 205C while
+    its header proudly announced ``nozzle_temperature = 270``. ASA extruded at
+    205C does not stick to anything, and a print made from it fails immediately.
+    It cost a print to find, and it went unnoticed for as long as it did because
+    every check made was against the header rather than against the commands.
+
+    So the temperature is substituted here as a literal, from the filament
+    preset, rather than as a template placeholder -- a placeholder would just be
+    one more thing that can silently fail to expand.
+    """
+    return _START_TEMP.sub(lambda m: f"{m.group(1)}{target}", start_gcode)
+
+
+def verify_gcode(gcode: Path, filament: str) -> None:
+    """Check the sliced file actually commands the right nozzle temperature.
+
+    The counterpart to the above, and the check that would have caught it: read
+    the emitted COMMANDS, never the header comments. The header is written from
+    the config and will happily agree with itself while the machine is told
+    something else entirely.
+    """
+    target = initial_temperature(filament)
+    text = gcode.read_text(errors="ignore")
+    commanded = {int(m.group(2)) for m in _START_TEMP.finditer(text)}
+    hot = {t for t in commanded if t > 0}
+    if not hot:
+        raise SliceError(
+            f"{gcode.name} contains no nozzle temperature command at all -- the "
+            f"printer would run at whatever it was last set to"
+        )
+    if target not in hot:
+        raise SliceError(
+            f"{gcode.name} heats the nozzle to {sorted(hot)} but "
+            f"{filament} wants {target}C on the first layer. The machine preset's "
+            f"start gcode is a stub with a hardcoded temperature -- see "
+            f"fix_start_temperature"
+        )
+
+
 def preset_files(
     dest: Path,
     nozzle: float,
@@ -120,6 +192,7 @@ def preset_files(
     dest.mkdir(parents=True, exist_ok=True)
     written = []
     fan = filament_overrides or {}
+    hot = initial_temperature(filament)
     for kind, name, extra in (
         ("machine", profiles.machine(nozzle).preset, {"curr_bed_type": bed}),
         ("process", process, {"curr_bed_type": bed, **(overrides or {})}),
@@ -134,6 +207,10 @@ def preset_files(
         cfg["from"] = "system"
         cfg["is_custom_defined"] = "0"
         cfg.update(extra)
+        if kind == "machine" and cfg.get("machine_start_gcode"):
+            cfg["machine_start_gcode"] = fix_start_temperature(
+                cfg["machine_start_gcode"], hot
+            )
         if kind == "filament":
             for key, value in fan.items():
                 cfg[key] = as_filament_value(cfg.get(key), value)
@@ -560,6 +637,12 @@ def slice_project(
         errors = [ln for ln in log.splitlines() if "[error]" in ln]
         tail = "\n".join(errors[-6:] or log.strip().splitlines()[-12:])
         raise SliceError(f"slice failed (rc={proc.returncode}):\n{tail}")
+
+    # Before anyone is told this file is ready: does it heat the nozzle to the
+    # temperature this filament needs? A slice that "succeeded" and produced a
+    # plausible time and mass can still be unprintable, and this pipeline has
+    # already shipped one that was.
+    verify_gcode(gcode, filament)
 
     density = float(profiles.resolve("filament", filament)["filament_density"][0])
     minutes, grams = read_estimates(gcode, density)
