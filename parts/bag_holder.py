@@ -68,6 +68,14 @@ throat by pulling. Past about 55 degrees off the axis the wall a bundle meets
 is more across than down, it stops walking anything anywhere, and you are back
 to threading a bag into a slot one-handed while a dog pulls.
 
+THE TOP BREAK. Chamfered, because the first print was sharp in the hand. Only
+the top: a break on the plate edge prints just as well the other way up, but
+this is a hundred-odd millimetres of thin ribbon with very little footprint,
+and in ASA every tenth of a millimetre of first-layer width is holding it down.
+It is cut as a stack of insets one printed layer high rather than as a chamfer,
+because the unions that build the aperture leave seams a few thousandths of a
+millimetre long and no chamfer will run across one -- see ``_break_top``.
+
 Print it in ASA. This lives outdoors on a lead: UV, cold mornings, and the
 pavement every time it is dropped. PLA is the one that goes brittle in the
 cold, soft in a car in July, and chalky in a year of sun.
@@ -125,9 +133,15 @@ class Params:
     plies: int = 2
     """Layers of webbing the collar's slot has to pass. Two: the folded handle."""
 
-    band: float = 8.0
+    band: float = 4.0
     """Height of the extrusion: the depth over which the throat pinches the
-    handles, the length of the swivel's bearing, and the thickness of the rest."""
+    handles, the length of the swivel's bearing, and the thickness of the rest.
+
+    Halved off the first print, which came out about twice as thick as it
+    needed to be. It buys a steeper swell on the swivel for the same catch --
+    see ``lean`` -- and costs out-of-plane stiffness, which goes as the cube of
+    this and is not the direction anything is loaded in.
+    """
     wall: float = 3.5
     """Width of the ribbon, everywhere. One number, because the ribbon is an
     offset of the aperture and there is no other section in the part."""
@@ -145,8 +159,14 @@ class Params:
     a hoop in compression rather than a link in tension, and because every
     millimetre of it is a millimetre on the head's diameter."""
     slot_clearance: float = 1.1
-    """Added to the folded webbing to get the collar's slot. Swallows the
-    stitching down a handle's fold, which is thicker than the webbing itself."""
+    """Added to the folded webbing before ``slot_ease``. Swallows the stitching
+    down a handle's fold, which is thicker than the webbing it is made of."""
+    slot_ease: float = 1.5
+    """Multiplies the slot after the clearance. A print says the additive
+    figure alone is not enough: working a folded handle through a hole needs
+    room in proportion to the strap, not a fixed margin, because it is the
+    fold's own bending radius that has to fit and that scales with the webbing.
+    Half again in each direction is what a 3/4 in lead actually wanted."""
     slot_corner: float = 1.5
     """Plan radius in the slot's corners. Webbing has rounded edges and a sharp
     internal corner is where a printed part cracks from."""
@@ -181,16 +201,28 @@ class Params:
     joint: float = 2.5
     """How far the body's top reaches into the head's ring. Enough to fuse, and
     less than the wall so it never reaches the socket."""
+    slice_height: float = 0.2
+    """Step the top break is cut in. One printed layer, so it never shows --
+    the same argument, and the same number, as the fidget's stacked profile."""
+    edge_break: float = 0.6
+    """Chamfer along the top edges, so the thing is not sharp in a pocket.
+
+    The top only. A chamfer on the plate edge would be the same 45 degrees the
+    other way up, which prints, but this part is a hundred millimetres of thin
+    ribbon with very little footprint, and in ASA every tenth of a millimetre
+    of first-layer width is holding it down. The plate face comes off with the
+    plate's own break on it anyway, and elephant's foot is a slicer setting.
+    """
 
     # --- the collar and its socket ----------------------------------------
 
     @property
     def slot_width(self) -> float:
-        return self.strap.width + self.slot_clearance
+        return (self.strap.width + self.slot_clearance) * self.slot_ease
 
     @property
     def slot_height(self) -> float:
-        return self.strap.stack(self.plies) + self.slot_clearance
+        return (self.strap.stack(self.plies) + self.slot_clearance) * self.slot_ease
 
     @property
     def slot_diagonal(self) -> float:
@@ -393,10 +425,16 @@ class Params:
             )
         if not 0 < self.shoulder < 90:
             raise ValueError(f"a {self.shoulder} degree shoulder is not a flare")
-        if self.band < self.slot:
+        if self.edge_break >= min(self.wall, self.band) / 2:
             raise ValueError(
-                f"a {self.band}mm band on a {self.slot}mm throat is a pinch wider "
-                f"than it is deep, so the bundle rolls out of the side of it"
+                f"a {self.edge_break}mm chamfer eats a {self.wall}mm ribbon "
+                f"{self.band}mm tall from both sides at once, leaving no flat on "
+                f"top of it and no wall to speak of"
+            )
+        if self.slot_ease < 1:
+            raise ValueError(
+                f"a {self.slot_ease} ease makes the collar's slot smaller than "
+                f"the webbing it is cut for"
             )
         if not 0 < self.blend <= self.belly_radius:
             raise ValueError(f"a {self.blend}mm blend is not a bend radius")
@@ -502,20 +540,57 @@ def _swell(radius: float, params: Params) -> Part:
     return revolve(Plane.XZ * half, Axis.Z)
 
 
+def _break_top(solid: Part, top: Sketch, params: Params) -> Part:
+    """Chamfer every top edge, cut as a stack of insets rather than chamfered.
+
+    OCCT will not chamfer the body's top wire, and it is worth saying why
+    rather than reaching for a smaller number: the unions that build the
+    aperture leave a dozen seams a few thousandths of a millimetre long, and a
+    chamfer cannot be run across one. Dropping them from the selection does not
+    help either, because the chain then has gaps in it.
+
+    So the break is cut the way the fidget builds its bulge -- as thin slabs of
+    a true offset, one printed layer each. Every slab is an exact offset of the
+    face above it, the staircase is at the layer height the slicer would have
+    discretised to anyway, and none of it depends on an operation that has an
+    opinion about how short an edge is allowed to be.
+    """
+    if params.edge_break <= 0:
+        return solid
+    steps = max(1, round(params.edge_break / params.slice_height))
+    cut = params.edge_break / steps
+    for k in range(steps):
+        ring = top - offset(top, -(k + 1) * cut, kind=Kind.ARC, min_edge_length=0.05)
+        z = params.band - params.edge_break + k * cut
+        solid -= extrude(Plane.XY.offset(z) * ring, amount=cut)
+    return solid
+
+
 def collar(params: Params) -> Part:
     """The turning part: a swollen disc with the lead's slot through it."""
     params.validate()
     slot = RectangleRounded(params.slot_width, params.slot_height, params.slot_corner)
-    return _swell(params.collar_radius, params) - extrude(
+    turning = _swell(params.collar_radius, params) - extrude(
         Plane.XY * slot, amount=params.band
     )
+    top = (Circle(params.collar_radius) - slot).faces()[0]
+    return _break_top(turning, top, params)
 
 
 def body(params: Params) -> Part:
-    """Everything that does not turn: the head, the shoulders, the throat."""
-    return extrude(Plane.XY * profile(params), amount=params.band) - _swell(
-        params.socket_radius, params
+    """Everything that does not turn: the head, the shoulders, the throat.
+
+    Chamfered before the socket is cut, deliberately. The socket's narrowest
+    place is its two ends, and its ends are what the collar's swell has to be
+    wider than; breaking those edges would widen exactly the constriction that
+    holds the collar in and give away a third of the catch. They are buried in
+    the joint where no thumb reaches anyway.
+    """
+    face = profile(params).faces()[0]
+    outline = _break_top(
+        extrude(Plane.XY * face, amount=params.band), face, params
     )
+    return outline - _swell(params.socket_radius, params)
 
 
 def build(params: Params) -> Part:

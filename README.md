@@ -49,14 +49,22 @@ pointing up, and a collar clamped round webbing points wherever the webbing
 does. One turning joint and the collar goes where the lead puts it while the
 body hangs off it plumb.
 
-Everything but the swivel is a profile extruded straight up, so the steepest
-thing anywhere in the part is the swell, at about 17° off vertical — less than
-half of what FDM bridges. The ribbon is the aperture offset outward by one
-wall, which is how a wire form is made; the hole it leaves is a chain of five
-circles and the tangent hulls between them, so there is no corner in it for a
-thin plastic handle to snag on, bar two that turn inward and are filleted
-instead — where the funnel meets the throat, and where the collar's head meets
-the shoulders.
+Everything but the swivel is a profile extruded straight up, so the only thing
+that leans anywhere is the swell, at about 31° off vertical — well inside what
+FDM bridges, and asserted to be out at the collar's radius and nowhere else.
+The ribbon is the aperture offset outward by one wall, which is how a wire form
+is made; the hole it leaves is a chain of five circles and the tangent hulls
+between them, so there is no corner in it for a thin plastic handle to snag on,
+bar two that turn inward and are filleted instead. The top edges are broken,
+which is cut as a stack of insets a layer high rather than as a chamfer,
+because the unions that build the aperture leave seams a few thousandths of a
+millimetre long and no chamfer will run across one.
+
+Three of the numbers here came off a print rather than out of the arithmetic:
+it was twice as thick as it needed to be, the collar's slot wanted half again
+in each direction before a folded handle would work through it easily, and a
+rule saying the throat had to be deeper than it was wide turned out to be
+wrong — a 5mm throat grips fine in 4mm of depth.
 
 ### Plant clip
 
