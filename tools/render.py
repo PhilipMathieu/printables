@@ -2,10 +2,15 @@
 
 Three views: a shaded isometric, a plan section showing how the rings nest,
 and an elevation section through the ring walls.
+
+The mesh, section, iso and plate helpers are shared: every part's own preview draws
+its sections off the same triangles, and every command line that can print more
+than one of something lays them out with the same grid.
 """
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -19,9 +24,13 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from build123d import Part, Pos  # noqa: E402
+
+from p2s import profiles  # noqa: E402
 from parts.einstein_fidget import Params, build  # noqa: E402
 
 FILAMENT = "#1d7a4c"  # fenway green
+ASA = "#79808a"  # black ASA as mid grey: shaded true black, every facet reads the same
 RING_STOPS = ["#0f5c38", "#1d7a4c", "#3ba873", "#7fc9a2", "#cfeadd"]
 INK = "#20252b"
 
@@ -31,6 +40,35 @@ def ring_colors(n: int):
     once there are twenty-odd rings."""
     cmap = matplotlib.colors.LinearSegmentedColormap.from_list("rings", RING_STOPS)
     return [cmap(i / max(1, n - 1)) for i in range(n)]
+
+
+def plate(parts: list[Part], gap: float = 6.0, nozzle: float = profiles.DEFAULT_NOZZLE):
+    """Lay parts out in a roughly square grid, centred on the origin.
+
+    Sized off the largest one so a mixed set -- clips cut for different stems,
+    holders cut for different leads -- still lands on a regular grid; the
+    slicer centres the whole thing on the bed afterwards.
+    """
+    sizes = [p.bounding_box().size for p in parts]
+    pitch_x = max(s.X for s in sizes) + gap
+    pitch_y = max(s.Y for s in sizes) + gap
+    cols = max(1, math.ceil(math.sqrt(len(parts) * pitch_y / pitch_x)))
+    rows = math.ceil(len(parts) / cols)
+
+    laid = Part()
+    for i, part in enumerate(parts):
+        col, row = i % cols, i // cols
+        laid += Pos(
+            (col - (cols - 1) / 2) * pitch_x, (row - (rows - 1) / 2) * pitch_y, 0
+        ) * part
+    size = laid.bounding_box().size
+    mach = profiles.machine(nozzle)
+    if not mach.fits((size.X, size.Y, size.Z)):
+        raise SystemExit(
+            f"{len(parts)} parts lay out {size.X:.0f} x {size.Y:.0f} mm, past the "
+            f"{mach.bed_x:.0f} x {mach.bed_y:.0f} mm bed. Print fewer at a time."
+        )
+    return laid
 
 
 def mesh(solid, tol: float = 0.05):
@@ -53,6 +91,38 @@ def section(points, tris, axis: int, value: float):
         if len(hits) == 2:
             segs.append(hits)
     return np.array(segs) if segs else np.empty((0, 2, 3))
+
+
+def iso(ax, points, tris, title: str, colour: str = ASA,
+        elev: float = 26, azim: float = -58) -> None:
+    """Flat-shaded three-quarter view: what comes off the plate.
+
+    One light, one colour, per-facet shading and no edges -- enough to read the
+    form of a part in a README and cheap enough to run in a test suite. The box
+    is forced cubic so a tall part is not stretched to fill the axes.
+    """
+    tri = points[tris]
+    n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    length = np.linalg.norm(n, axis=1, keepdims=True)
+    n = n / np.where(length == 0, 1, length)
+    light = np.array([0.35, -0.75, 0.56])
+    light /= np.linalg.norm(light)
+    shade = 0.45 + 0.65 * np.clip(n @ light, 0, 1)
+    base = np.array(matplotlib.colors.to_rgb(colour))
+    ax.add_collection3d(
+        Poly3DCollection(
+            tri, facecolors=np.clip(base * shade[:, None], 0, 1), edgecolors="none"
+        )
+    )
+    lo, hi = points.min(axis=0), points.max(axis=0)
+    span = max(hi - lo)
+    mid = (lo + hi) / 2
+    for setter, i in ((ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)):
+        setter(mid[i] - span / 2, mid[i] + span / 2)
+    ax.set_box_aspect((1, 1, 1))
+    ax.view_init(elev=elev, azim=azim)
+    ax.set_axis_off()
+    ax.set_title(title, color=INK, fontsize=11, y=0.92)
 
 
 def render(params: Params, dest: Path) -> Path:

@@ -10,9 +10,40 @@ each one carries a `validate()` that refuses the combinations that are
 physically impossible rather than quietly producing a part that cannot print.
 The tests assert design intent, not geometry hashes: that a rim is the highest
 thing on a coin, that nothing in a clip overhangs more than 45 degrees, that a
-mounting pad leaves an adhesive strip's pull tab clear.
+mounting pad leaves an adhesive strip's pull tab clear, that the only way out
+of a bag hook is above its own centreline.
 
 ## What's in it
+
+### Poop bag holder
+
+<img src="docs/bag_holder.png" alt="Bag holder: as printed, the design in profile, and the slot" width="100%">
+
+A doo loop: a slot that goes on the lead's handle, and an open horn the tied
+bag drops into. The whole part is one profile extruded once and printed lying
+in the plane it was drawn in, so nothing in it overhangs at all — the lead's
+slot, which would be a bridge in any other orientation, is a plain vertical
+hole — and the bag hangs in the profile's own plane, so its weight runs along
+the extrusions rather than across them. That is also why the horn can wrap as
+far as it likes: unlike the plant clip's C, nothing about how far it comes
+round is a printing question.
+
+Retention is geometry and no moving part. The gate sits entirely above the
+horn's centreline, so the bag has to climb 13mm out of the seat before there is
+any way out at all — which a walking swing does not do and a hand does without
+looking.
+
+```sh
+python -m tools.bag_holder --strap standard
+python -m tools.bag_holder --set -o out/bag_holders
+```
+
+The slot is cut to pass the handle folded, two plies, because that is the only
+way onto a lead that does not involve getting past the snap hook. Thread the
+handle through and the holder rides free on the lead; pass the rest of the lead
+back through the handle first and the same slot is a girth hitch that stays at
+your hand. Only the head changes with the lead's width — the horn is identical
+on all four in the catalogue — so `--set` costs nothing but the heads.
 
 ### Plant clip
 
@@ -65,7 +96,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip catalogue |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip and lead webbing catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |

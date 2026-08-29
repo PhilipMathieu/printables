@@ -29,79 +29,21 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle as CirclePatch
 from matplotlib.patches import Rectangle
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from build123d import Part, Pos, export_stl  # noqa: E402
+from build123d import Part, export_stl  # noqa: E402
 
 from geom import strips  # noqa: E402
 from p2s import inventory, profiles  # noqa: E402
 from parts.plant_clip import STEMS, Params, build  # noqa: E402
-from tools.render import INK, mesh, section  # noqa: E402
+from tools.render import INK, iso, mesh, plate, section  # noqa: E402
 
-# Black ASA rendered as mid grey: shaded true black, every facet reads the same.
-ASA = "#79808a"
 STEM = "#4f7a3a"
 ADHESIVE = "#c8792b"
-
-
-def plate(clips: list[Part], gap: float = 6.0, nozzle: float = profiles.DEFAULT_NOZZLE):
-    """Lay clips out in a roughly square grid, centred on the origin.
-
-    Sized off the largest one so a mixed set of stem sizes still lands on a
-    regular grid; the slicer centres the whole thing on the bed afterwards.
-    """
-    sizes = [c.bounding_box().size for c in clips]
-    pitch_x = max(s.X for s in sizes) + gap
-    pitch_y = max(s.Y for s in sizes) + gap
-    cols = max(1, math.ceil(math.sqrt(len(clips) * pitch_y / pitch_x)))
-    rows = math.ceil(len(clips) / cols)
-
-    laid = Part()
-    for i, clip in enumerate(clips):
-        col, row = i % cols, i // cols
-        laid += Pos(
-            (col - (cols - 1) / 2) * pitch_x, (row - (rows - 1) / 2) * pitch_y, 0
-        ) * clip
-    size = laid.bounding_box().size
-    mach = profiles.machine(nozzle)
-    if not mach.fits((size.X, size.Y, size.Z)):
-        raise SystemExit(
-            f"{len(clips)} clips lay out {size.X:.0f} x {size.Y:.0f} mm, past the "
-            f"{mach.bed_x:.0f} x {mach.bed_y:.0f} mm bed. Print fewer at a time."
-        )
-    return laid
-
-
-def _iso(ax, points, tris, title: str) -> None:
-    """Flat-shaded three-quarter view: what comes off the plate."""
-    tri = points[tris]
-    n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
-    length = np.linalg.norm(n, axis=1, keepdims=True)
-    n = n / np.where(length == 0, 1, length)
-    light = np.array([0.35, -0.75, 0.56])
-    light /= np.linalg.norm(light)
-    shade = 0.45 + 0.65 * np.clip(n @ light, 0, 1)
-    base = np.array(matplotlib.colors.to_rgb(ASA))
-    ax.add_collection3d(
-        Poly3DCollection(
-            tri, facecolors=np.clip(base * shade[:, None], 0, 1), edgecolors="none"
-        )
-    )
-    lo, hi = points.min(axis=0), points.max(axis=0)
-    span = max(hi - lo)
-    mid = (lo + hi) / 2
-    for setter, i in ((ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)):
-        setter(mid[i] - span / 2, mid[i] + span / 2)
-    ax.set_box_aspect((1, 1, 1))
-    ax.view_init(elev=26, azim=-58)
-    ax.set_axis_off()
-    ax.set_title(title, color=INK, fontsize=11, y=0.92)
 
 
 def _section_view(ax, points, tris, params: Params) -> None:
@@ -193,7 +135,7 @@ def preview(params: Params, dest: Path, part: Part | None = None) -> Path:
     gs = fig.add_gridspec(1, 3, width_ratios=[1.05, 1, 1.25], wspace=0.02,
                           left=0.01, right=0.99, top=0.90, bottom=0.04)
     bb = part.bounding_box()
-    _iso(fig.add_subplot(gs[0, 0], projection="3d"), points, tris,
+    iso(fig.add_subplot(gs[0, 0], projection="3d"), points, tris,
          f"as printed · {bb.size.X:.0f} × {bb.size.Y:.0f} × {bb.size.Z:.0f} mm")
     _section_view(fig.add_subplot(gs[0, 1]), points, tris, params)
     _plan_view(fig.add_subplot(gs[0, 2]), points, tris, params)
