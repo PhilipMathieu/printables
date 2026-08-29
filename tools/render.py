@@ -46,8 +46,8 @@ def plate(parts: list[Part], gap: float = 6.0, nozzle: float = profiles.DEFAULT_
     """Lay parts out in a roughly square grid, centred on the origin.
 
     Sized off the largest one so a mixed set -- clips cut for different stems,
-    holders cut for different leads -- still lands on a regular grid; the
-    slicer centres the whole thing on the bed afterwards.
+    say -- still lands on a regular grid; the slicer centres the whole thing on
+    the bed afterwards.
     """
     sizes = [p.bounding_box().size for p in parts]
     pitch_x = max(s.X for s in sizes) + gap

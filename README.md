@@ -10,40 +10,48 @@ each one carries a `validate()` that refuses the combinations that are
 physically impossible rather than quietly producing a part that cannot print.
 The tests assert design intent, not geometry hashes: that a rim is the highest
 thing on a coin, that nothing in a clip overhangs more than 45 degrees, that a
-mounting pad leaves an adhesive strip's pull tab clear, that the only way out
-of a bag hook is above its own centreline.
+mounting pad leaves an adhesive strip's pull tab clear, that a bag holder's
+funnel never once widens on the way down.
 
 ## What's in it
 
 ### Poop bag holder
 
-<img src="docs/bag_holder.png" alt="Bag holder: as printed, the design in profile, and the slot" width="100%">
+<img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">
 
-A doo loop: a slot that goes on the lead's handle, and an open horn the tied
-bag drops into. The whole part is one profile extruded once and printed lying
-in the plane it was drawn in, so nothing in it overhangs at all — the lead's
-slot, which would be a bridge in any other orientation, is a plain vertical
-hole — and the bag hangs in the profile's own plane, so its weight runs along
-the extrusions rather than across them. That is also why the horn can wrap as
-far as it likes: unlike the plant clip's C, nothing about how far it comes
-round is a printing question.
+A doo loop: an eye at the top for a chain, a wide opening under it, and that
+opening funnelled down into a narrow throat. Push the tied handles through the
+opening, pull down, and they wedge where the funnel gets to their size. There
+is no hook, no gate and no catch in it anywhere.
 
-Retention is geometry and no moving part. The gate sits entirely above the
-horn's centreline, so the bag has to climb 13mm out of the seat before there is
-any way out at all — which a walking swing does not do and a hand does without
-looking.
+Retention is that the aperture is *closed*. It is a hole, not a hook, so
+nothing in it can fall out however hard the lead is swung, and the bag comes
+off the way it went on. A hook has to be either easy to load or hard to unload;
+a closed hole is both, because the direction that gets a bag in is a direction
+gravity never pushes it. What the funnel adds is that you do not have to aim:
+anything landed anywhere in the opening is walked down to the throat by pulling
+on it, and a 26mm bundle stops 9mm below the belly where a 9mm bundle stops 22.
 
 ```sh
-python -m tools.bag_holder --strap standard
-python -m tools.bag_holder --set -o out/bag_holders
+python -m tools.bag_holder
+python -m tools.bag_holder --slot 4 --copies 2
 ```
 
-The slot is cut to pass the handle folded, two plies, because that is the only
-way onto a lead that does not involve getting past the snap hook. Thread the
-handle through and the holder rides free on the lead; pass the rest of the lead
-back through the handle first and the same slot is a girth hitch that stays at
-your hand. Only the head changes with the lead's width — the horn is identical
-on all four in the catalogue — so `--set` costs nothing but the heads.
+It hangs on a ball chain, a split ring or a small carabiner through the eye,
+and that is not decoration — the funnel only works pointing up, and anything
+clamped to the webbing holds the holder square to a lead that is at whatever
+angle the dog has put it. Hung from a point it rights itself, and swings out of
+the way of a knee.
+
+The whole part is one profile extruded once and printed lying in the plane it
+was drawn in, so nothing in it overhangs at all. The moulded original is round
+rod, which is the one section that cannot be printed that way — lying down its
+whole underside is an overhang, and standing up the part is a tower of air. The
+ribbon is the aperture offset outward by one wall and nothing else, which is
+how a wire form is made; the hole it leaves is a chain of four circles and the
+tangent hulls between them, so there is no corner in it for a thin plastic
+handle to snag on, bar the one where the funnel meets the throat, which is
+filleted because a hull can only ever bulge the wrong way.
 
 ### Plant clip
 
@@ -96,7 +104,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip and lead webbing catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip catalogue |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
