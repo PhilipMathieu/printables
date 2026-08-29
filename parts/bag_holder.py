@@ -1,9 +1,11 @@
 """Doo loop: a closed wire form that wedges a tied bag by its handles.
 
-An eye at the top for a chain, a wide opening under it, and that opening
-funnelled down into a narrow throat. You push the tied handles through the
-opening, pull down, and they wedge where the funnel gets to their size. There
-is no hook, no gate and no catch anywhere in it.
+A collar at the top that the lead's handle threads through, a wide opening
+under it, and that opening funnelled down into a narrow throat. You push the
+tied handles through the opening, pull down, and they wedge where the funnel
+gets to their size. There is no hook, no gate and no catch anywhere in it, and
+nothing to buy: the collar is a separate body printed inside its own socket in
+one go, and it turns.
 
 WHY THE APERTURE IS CLOSED. That is the whole retention argument. The hole the
 bag goes into has no way out of it -- it is a hole, not a hook -- so nothing
@@ -12,22 +14,33 @@ off the way it went on, lifted back up the funnel. A hook has to be either easy
 to load or hard to unload; a closed hole is both, because the direction that
 gets a bag in is a direction gravity never pushes it.
 
-WHY IT HANGS ON A CHAIN AND NOT ON THE LEAD ITSELF. The funnel only works
-pointing up. Anything that clamps to the webbing holds the holder square to the
-lead, and a lead is at whatever angle the dog has put it -- so the funnel would
-spend the walk on its side, where a bag slides across the taper instead of down
-it. A ball chain, a split ring or a small carabiner through the eye lets it
-hang plumb whatever the lead is doing, and lets it swing out of the way of a
-knee. Which is why the top of this part is an eye and not a slot.
+WHY THERE IS A SWIVEL. The funnel only works pointing up, and a collar clamped
+round webbing points wherever the webbing does. Webbing twists, but not
+locally and not willingly, so a rigid collar spends the walk holding the funnel
+over on its side. One turning joint between the collar and the body fixes it:
+the collar goes where the lead puts it and the body hangs off it plumb. It buys
+one axis rather than the two a ball chain would, so the funnel stays within the
+lead's own inclination of upright rather than dead upright -- and near a hand,
+which is where this rides, a lead is not far off level.
 
-WHY IT IS ONE PROFILE, EXTRUDED. Drawn flat, extruded once, printed lying in
-the plane it was drawn in: nothing in the part overhangs at all, and the bag
-hangs in the profile's own plane, so its weight runs along the extrusions
-rather than across them. The moulded original is round rod, which is the one
-section that cannot be printed this way -- lying down its whole underside is an
-overhang, and standing up the part is a tower of air. The flat ribbon is also
-the better wedge: the handles are pinched between two walls the depth of the
-band rather than caught between two lines.
+HOW THE SWIVEL IS PRINTED. The same way the fidget's rings are: both the
+collar's rim and the socket it sits in swell by ``interlock`` at mid height and
+come back to nominal at the plate and the top, so the collar's widest is wider
+than either end of its own socket and it cannot be lifted out. Because both
+surfaces are the same profile shifted radially, the gap between them is exactly
+``gap`` at every single height, which is the one thing that decides whether a
+print-in-place joint comes off the plate turning or comes off fused.
+
+WHAT THE SWIVEL COSTS. The zero-overhang claim, and only that. Everything else
+here is a profile extruded straight up, but the swell has to lean: at the
+default it leans about 17 degrees off vertical, which is the steepest thing
+anywhere in the part and less than half of what FDM bridges unsupported.
+
+WHY THE COLLAR TAKES THE HANDLE FOLDED. Two plies, because that is the only way
+onto a lead that does not involve getting past the snap hook. Thread the handle
+through and the holder rides free on the lead; pass the rest of the lead back
+through the handle first and the same slot is a girth hitch that stays at your
+hand.
 
 WHY THE RIBBON IS THE SAME WIDTH EVERYWHERE. It is the aperture offset outward
 by ``wall`` and nothing else, which is how a wire form is made and what makes
@@ -35,18 +48,19 @@ this one read as bent wire rather than as a shape with a hole in it. It also
 means there is nowhere in the part with less section than anywhere else, so
 there is nowhere in particular for it to break.
 
-WHY THE APERTURE IS TANGENT-CONTINUOUS. It is a chain of four circles and the
-hulls between them -- crown, belly, throat top, throat bottom -- so every join
-in the hole is smooth. A corner in there would be two things at once: somewhere
-for a thin plastic handle to snag on the way down, and a notch for the part to
-crack from, since the inside of the aperture is where the ribbon is in tension.
+WHY THE APERTURE IS TANGENT-CONTINUOUS. It is a chain of circles and the hulls
+between them, so every join in the hole is smooth. A corner in there would be
+two things at once: somewhere for a thin plastic handle to snag on the way
+down, and a notch for the part to crack from, since the inside of the aperture
+is where the ribbon is in tension.
 
-One join does not come out smooth on its own, and it is the one that matters
-most: where the funnel's straight taper runs into the throat's parallel wall.
-A tangent hull cannot fix it, because a hull only ever bulges outward and this
-corner turns inward -- the taper crosses the wall at the full funnel angle and
-leaves a notch exactly where every bundle is dragged past. So it is filleted,
-by ``blend``, which is the bend radius a wire form would have had anyway.
+Two joins do not come out smooth on their own. Where the funnel's straight
+taper runs into the throat's parallel wall, the taper crosses at the full
+funnel angle and leaves a notch exactly where every bundle is dragged past;
+and where the collar's ring runs into the shoulders, two circles cross. A
+tangent hull cannot fix either, because a hull only ever bulges outward and
+both of these turn inward. So both are filleted -- ``blend`` and ``neck`` --
+which is the bend radius a wire form would have had anyway.
 
 WHY THE FUNNEL IS CAPPED. The taper is there so that loading the thing does not
 involve aiming: anything landed anywhere in the opening is walked down to the
@@ -62,99 +76,155 @@ cold, soft in a car in July, and chalky in a year of sun.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from build123d import (
+    Axis,
     Circle,
     Kind,
     Part,
     Plane,
+    Polygon,
     Pos,
+    RectangleRounded,
     Sketch,
     extrude,
     fillet,
     make_face,
     make_hull,
     offset,
+    revolve,
 )
+
+from geom import webbing
+from geom.webbing import Webbing
 
 MIN_WALL = 0.8
 """Two extrusions on the 0.4mm nozzle. Thinner than that the ribbon is a single
 bead with no wall either side, and the ribbon is the entire part."""
-
-MIN_EYE = 6.0
-"""Below this nothing anyone would actually hang it by goes through: a split
-ring, a ball chain connector, the gate of a small carabiner."""
 
 MIN_SLOT = 3.0
 """Narrower than this the handles have to be threaded into the throat rather
 than pulled down it, and not having to aim is the point of a funnel."""
 
 MAX_FUNNEL = 55.0
-"""Degrees off the axis. Past this the taper stops being a lead-in. See the
-module note."""
+"""Degrees off the axis. Past this the taper stops being a lead-in."""
+
+MAX_LEAN = 45.0
+"""Degrees off vertical for the swivel's swell, which is the only thing in the
+part that leans at all. FDM stops holding past this."""
 
 
 @dataclass(frozen=True)
 class Params:
     """Everything the GUI would expose as a slider."""
 
-    eye: float = 8.0
-    """Bore of the ring at the top, in mm. Sized for whatever is to hand -- a
-    ball chain connector, a split ring, a small carabiner -- because what hangs
-    it is not printed and the chain is what lets it hang plumb."""
+    strap: Webbing = webbing.STANDARD
+    """Lead the collar is cut for. It sets the collar, and the collar sets the
+    head; nothing below the neck knows about it."""
+    plies: int = 2
+    """Layers of webbing the collar's slot has to pass. Two: the folded handle."""
 
     band: float = 8.0
     """Height of the extrusion: the depth over which the throat pinches the
-    handles, and the thickness of everything else."""
+    handles, the length of the swivel's bearing, and the thickness of the rest."""
     wall: float = 3.5
     """Width of the ribbon, everywhere. One number, because the ribbon is an
     offset of the aperture and there is no other section in the part."""
 
+    # --- the swivel -------------------------------------------------------
+
+    gap: float = 0.35
+    """Clearance between the collar and its socket, radially, at every height.
+    The one number that decides whether it comes off the plate turning."""
+    interlock: float = 1.2
+    """How much both surfaces swell at mid height. What is left after the gap
+    is what actually holds the collar in -- see ``engagement``."""
+    collar_wall: float = 2.6
+    """Ribbon around the collar's own slot. Thinner than ``wall`` because it is
+    a hoop in compression rather than a link in tension, and because every
+    millimetre of it is a millimetre on the head's diameter."""
+    slot_clearance: float = 1.1
+    """Added to the folded webbing to get the collar's slot. Swallows the
+    stitching down a handle's fold, which is thicker than the webbing itself."""
+    slot_corner: float = 1.5
+    """Plan radius in the slot's corners. Webbing has rounded edges and a sharp
+    internal corner is where a printed part cracks from."""
+
+    # --- the opening ------------------------------------------------------
+
     crown: float = 9.0
-    """Radius of the top of the opening, where it tucks under the eye. Sets how
-    much of a dome the opening has rather than a point."""
-    belly: float = 38.0
+    """Radius of the top of the opening, where it tucks under the collar."""
+    belly: float = 36.0
     """Widest part of the opening. The biggest bundle of handles that can be
     pushed in, and how much room there is for two fingers behind it."""
     shoulder: float = 25.0
-    """Degrees off the axis for the flare from crown to belly. Cosmetic more
-    than anything -- it is what makes the opening a teardrop and not a circle
-    -- but it also sets how much of the part is opening rather than funnel."""
+    """Degrees off the axis for the flare from crown to belly."""
+    cheek: float = 4.0
+    """How much wider than the straight flare the shoulders bow out, each side.
+    Nothing structural: it is the difference between a kite and something with
+    a bit of life in it, and it costs a millimetre or two of width."""
 
     slot: float = 5.0
     """Width of the throat: what actually pinches the handles. Anything looser
     than its own bundle simply travels to the bottom of the throat, which is
     closed, so a slot that is too wide costs grip and never the bag."""
     funnel: float = 42.0
-    """Degrees off the axis for the taper from belly to throat. Steep keeps the
-    part short and rounds the bottom of the opening off, because the belly's own
-    arc stays exposed further round before the straight run starts; shallow
-    guides better and draws the whole thing out. Capped -- see the module note."""
-    throat: float = 24.0
+    """Degrees off the axis for the taper from belly to throat."""
+    throat: float = 22.0
     """Parallel length of the throat below the taper."""
 
     blend: float = 6.0
-    """Radius of the fillet where the funnel meets the throat. The one join in
-    the aperture that is not tangent by construction. See the module note."""
-    tail: float = 14.0
-    """Stem below the throat. What two fingers hold while the other hand pushes
-    a bag in -- holding the loop itself closes a hand over the opening -- and
-    the ballast that keeps the thing hanging plumb on its chain."""
-    tail_width: float = 5.0
-    joint: float = 2.0
-    """How far the body's top reaches into the eye's ring. Enough to fuse, and
-    less than the wall so it never reaches the bore."""
+    """Fillet where the funnel meets the throat."""
+    neck: float = 7.0
+    """Fillet where the collar's head meets the shoulders."""
+    joint: float = 2.5
+    """How far the body's top reaches into the head's ring. Enough to fuse, and
+    less than the wall so it never reaches the socket."""
 
-    # --- what follows from those ------------------------------------------
+    # --- the collar and its socket ----------------------------------------
 
     @property
-    def eye_radius(self) -> float:
-        return self.eye / 2
+    def slot_width(self) -> float:
+        return self.strap.width + self.slot_clearance
 
     @property
-    def eye_outer(self) -> float:
-        return self.eye_radius + self.wall
+    def slot_height(self) -> float:
+        return self.strap.stack(self.plies) + self.slot_clearance
+
+    @property
+    def slot_diagonal(self) -> float:
+        """Corner to corner. What the collar has to be round enough to contain."""
+        return math.hypot(self.slot_width, self.slot_height)
+
+    @property
+    def collar_radius(self) -> float:
+        return self.slot_diagonal / 2 + self.collar_wall
+
+    @property
+    def socket_radius(self) -> float:
+        return self.collar_radius + self.gap
+
+    @property
+    def head_radius(self) -> float:
+        return self.socket_radius + self.wall
+
+    @property
+    def engagement(self) -> float:
+        """How much of the swell holds the collar in, past the clearance."""
+        return self.interlock - self.gap
+
+    @property
+    def lean(self) -> float:
+        """Degrees off vertical of the swell: the steepest thing in the part."""
+        return math.degrees(math.atan(self.interlock / (self.band / 2)))
+
+    @property
+    def bearing_area(self) -> float:
+        """Wall the lead's weight lands on inside the collar, in mm^2."""
+        return (self.slot_width - 2 * self.slot_corner) * self.band
+
+    # --- the opening ------------------------------------------------------
 
     @property
     def belly_radius(self) -> float:
@@ -166,12 +236,20 @@ class Params:
 
     @property
     def ribbon_top(self) -> float:
-        """Top of the body, which sits ``joint`` inside the eye's ring."""
-        return -(self.eye_outer - self.joint)
+        return -(self.head_radius - self.joint)
 
     @property
     def crown_y(self) -> float:
         return self.ribbon_top - self.wall - self.crown
+
+    @property
+    def cheek_radius(self) -> float:
+        return (self.crown + self.belly_radius) / 2 + self.cheek
+
+    @property
+    def cheek_y(self) -> float:
+        """Half way down the flare, where the bow is widest."""
+        return self.crown_y - self._span(self.cheek_radius, self.crown, self.shoulder)
 
     @property
     def belly_y(self) -> float:
@@ -182,7 +260,9 @@ class Params:
         radii over the distance between centres, so the distance follows from
         the angle and the two radii.
         """
-        return self.crown_y - self._span(self.belly_radius, self.crown, self.shoulder)
+        return self.cheek_y - self._span(
+            self.belly_radius, self.cheek_radius, self.shoulder
+        )
 
     @property
     def throat_top_y(self) -> float:
@@ -200,61 +280,32 @@ class Params:
 
     @property
     def corner_y(self) -> float:
-        """Where the funnel's taper crosses the throat's wall, before blending.
-
-        Below the throat's own top, because the taper is tangent to the throat's
-        top circle further round than its equator and so is still outside the
-        wall when it gets there.
-        """
+        """Where the funnel's taper crosses the throat's wall, before blending."""
         lean = math.radians(self.funnel)
         return self.belly_y - (
             self.belly_radius - self.slot_radius * math.cos(lean)
         ) / math.sin(lean)
 
     @property
-    def tail_top(self) -> float:
-        """Centre of the tail's top, set so its crown lands mid-way through the
-        ribbon's cap: far enough in to fuse, and never poking into the hole."""
-        return self.aperture_bottom - self.wall / 2 - self.tail_width / 2
-
-    @property
-    def tail_end(self) -> float:
-        return self.aperture_bottom - self.wall - self.tail
-
-    @property
     def length(self) -> float:
-        """Eye to tail, in mm."""
-        return self.eye_outer - self.tail_end
+        return self.head_radius - (self.aperture_bottom - self.wall)
 
     @property
     def width(self) -> float:
-        return self.belly + 2 * self.wall
+        return max(self.belly + 2 * self.wall, 2 * self.head_radius)
 
     @property
     def grip(self) -> tuple[float, float]:
-        """Bundles of handles this holds, smallest to largest.
-
-        The largest is the belly, because that is the biggest thing that can be
-        pushed into the opening at all. The smallest is the throat: below that
-        a bundle stops being pinched and simply lies in the bottom of the
-        throat, which is closed, so it is held either way.
-        """
+        """Bundles of handles this wedges, smallest to largest."""
         return self.slot, self.belly
 
     @property
     def blend_start(self) -> float:
-        """Height at which the funnel's straight taper gives way to the blend."""
         lean = math.radians(self.funnel)
         return self.corner_y + self.blend * math.tan(lean / 2) * math.cos(lean)
 
     def touches(self, bundle: float) -> float:
-        """Height at which a wedged bundle meets the wall.
-
-        Below its own centre, because the wall leans: the contact is where the
-        wall's normal through the centre lands on it. Which wall a bundle is
-        actually on is the difference between ``seats`` being exact and being a
-        bound -- see there.
-        """
+        """Height at which a wedged bundle meets the wall."""
         return self.seats(bundle) - bundle / 2 * math.sin(math.radians(self.funnel))
 
     def seats(self, bundle: float) -> float:
@@ -268,12 +319,10 @@ class Params:
         wedge against and the bundle lies in the bottom of the throat instead,
         which is closed, so it is held there rather than lost.
 
-        Exact wherever ``touches`` is above ``blend_start``, which is every
-        bundle but the smallest few millimetres' worth. Below that the bundle
-        is riding the blend rather than the taper, and the blend is material
-        added into the corner, so it comes to rest a fraction of a millimetre
-        higher than this says. The error is in the direction of less travel,
-        never of a bundle going deeper than the arithmetic expects.
+        Exact wherever ``touches`` is above ``blend_start``. Below that the
+        bundle rides the blend rather than the taper and comes to rest a
+        fraction higher than this says -- an error in the direction of less
+        travel, never of a bundle going deeper than the arithmetic expects.
         """
         if bundle > self.belly:
             raise ValueError(
@@ -283,30 +332,41 @@ class Params:
             return self.aperture_bottom + bundle / 2
         return self.belly_y - self._span(self.belly_radius, bundle / 2, self.funnel)
 
+    def for_strap(self, name: str) -> Params:
+        """The same holder cut for a different lead."""
+        return replace(self, strap=webbing.named(name))
+
     @staticmethod
     def _span(big: float, small: float, angle: float) -> float:
         """Distance between two circles' centres for a tangent line at ``angle``."""
         return (big - small) / math.sin(math.radians(angle))
 
     def validate(self) -> None:
-        if self.wall < MIN_WALL:
+        if self.plies < 1:
+            raise ValueError("a collar that passes no webbing is a hole in a hook")
+        if self.wall < MIN_WALL or self.collar_wall < MIN_WALL:
             raise ValueError(
-                f"a {self.wall}mm ribbon is under {MIN_WALL}mm, which is two "
-                f"extrusions on the 0.4mm nozzle. Below that it prints as a "
-                f"single bead with no wall either side, and the ribbon is the "
-                f"whole part."
+                f"a {min(self.wall, self.collar_wall)}mm ribbon is under "
+                f"{MIN_WALL}mm, which is two extrusions on the 0.4mm nozzle. "
+                f"Below that it prints as a single bead with no wall either side."
             )
-        if self.eye < MIN_EYE:
+        if self.engagement <= 0:
             raise ValueError(
-                f"a {self.eye}mm eye takes no split ring, no ball chain and no "
-                f"carabiner gate worth the name, and this hangs on one of those "
-                f"or on nothing"
+                f"a {self.interlock}mm swell against a {self.gap}mm gap leaves "
+                f"{self.engagement:.2f}mm holding the collar in, which is nothing: "
+                f"it lifts straight out of its socket"
+            )
+        if self.lean > MAX_LEAN:
+            raise ValueError(
+                f"swelling {self.interlock}mm over {self.band / 2}mm leans the "
+                f"socket {self.lean:.0f} degrees off vertical, past the "
+                f"{MAX_LEAN:.0f} FDM holds unsupported. Raise the band, or swell "
+                f"less and accept the shallower catch."
             )
         if self.joint >= self.wall:
             raise ValueError(
                 f"a {self.joint}mm joint on a {self.wall}mm wall pushes the body "
-                f"through the eye's ring and into its bore, leaving nothing to "
-                f"thread a chain through"
+                f"through the head's ring and into the collar's socket"
             )
         if self.slot < MIN_SLOT:
             raise ValueError(
@@ -319,11 +379,11 @@ class Params:
                 f"a {self.slot}mm throat under a {self.belly}mm belly is not a "
                 f"funnel, it is a slot with a bulge in it"
             )
-        if self.crown >= self.belly_radius:
+        if self.crown >= self.cheek_radius or self.cheek_radius >= self.belly_radius:
             raise ValueError(
-                f"a {self.crown}mm crown radius in a {self.belly}mm belly makes "
-                f"the opening flare inward on the way down. Shrink the crown, or "
-                f"widen the belly."
+                f"a {self.crown}mm crown, a {self.cheek_radius:.1f}mm cheek and a "
+                f"{self.belly_radius}mm belly do not widen in that order, so the "
+                f"opening flares inward somewhere on the way down"
             )
         if not 0 < self.funnel <= MAX_FUNNEL:
             raise ValueError(
@@ -335,51 +395,57 @@ class Params:
             raise ValueError(f"a {self.shoulder} degree shoulder is not a flare")
         if self.band < self.slot:
             raise ValueError(
-                f"a {self.band}mm band on a {self.slot}mm throat is a pinch "
-                f"wider than it is deep, so the bundle rolls out of the side of "
-                f"it instead of being held. Give it at least {self.slot}mm."
+                f"a {self.band}mm band on a {self.slot}mm throat is a pinch wider "
+                f"than it is deep, so the bundle rolls out of the side of it"
             )
         if not 0 < self.blend <= self.belly_radius:
+            raise ValueError(f"a {self.blend}mm blend is not a bend radius")
+        if not 0 < self.neck <= self.head_radius:
+            raise ValueError(f"a {self.neck}mm neck fillet is not a bend radius")
+        if self.slot_corner > min(self.slot_width, self.slot_height) / 2:
             raise ValueError(
-                f"a {self.blend}mm blend is not a bend radius a wire would take "
-                f"between a {self.funnel} degree taper and a {self.slot}mm throat"
+                f"a {self.slot_corner}mm radius in the collar's "
+                f"{self.slot_width:.1f} x {self.slot_height:.1f}mm slot leaves no "
+                f"flat for the strap to bear on"
             )
-        if self.tail <= self.tail_width - self.wall / 2:
-            raise ValueError(
-                f"a {self.tail}mm tail is shorter than the {self.tail_width}mm it "
-                f"is wide, so it is a bump on the bottom of the throat rather "
-                f"than something to hold"
-            )
-        if self.tail_width > 2 * (self.slot_radius + self.wall):
-            raise ValueError(
-                f"a {self.tail_width}mm tail is wider than the "
-                f"{2 * (self.slot_radius + self.wall):.1f}mm throat it hangs off, "
-                f"so it stands proud of the outline instead of continuing it"
-            )
-        if self.throat <= 0 or self.tail <= 0 or self.crown <= 0:
-            raise ValueError("the crown, the throat and the tail all have length")
 
 
 def _stadium(r1: float, y1: float, r2: float, y2: float) -> Sketch:
-    """Tangent hull of two circles on the axis: the shape a wire makes.
-
-    Every straight run in this part is one of these, so every join between a
-    run and the circle it came from is tangent rather than a corner.
-    """
+    """Tangent hull of two circles on the axis: the shape a wire makes."""
     discs = (Pos(0, y1) * Circle(r1), Pos(0, y2) * Circle(r2))
     return make_face(make_hull(list(discs[0].edges()) + list(discs[1].edges())))
 
 
-def aperture(params: Params) -> Sketch:
-    """The hole the bag goes into: crown, belly, funnel, throat.
+def _pick(sketch: Sketch, x: float, y: float, near: float = 0.5):
+    """Corners at a computed place, both sides of the axis.
 
-    A chain of four circles hulled in pairs. The first pair flares out to the
-    belly, the second tapers in to the throat, and the third -- two circles of
-    the same radius -- is the parallel throat itself.
+    By where they have to be rather than by walking the wire: the booleans
+    leave a few sub-tenth-of-a-millimetre seams that are vertices too, and
+    every one of those is tangent and wants leaving alone.
+    """
+    found = [
+        v
+        for v in sketch.faces()[0].vertices()
+        if abs(abs(v.X) - x) < 1e-3 and abs(v.Y - y) < near
+    ]
+    if len(found) != 2:
+        raise RuntimeError(
+            f"expected two corners at x=±{x:.2f}, y={y:.2f}; found {len(found)}"
+        )
+    return found
+
+
+def aperture(params: Params) -> Sketch:
+    """The hole the bag goes into: crown, cheeks, belly, funnel, throat.
+
+    A chain of five circles hulled in pairs. The cheek is only there to bow the
+    flare out; take it away and the two straight runs become one and the
+    opening is a kite.
     """
     params.validate()
     chain = (
         (params.crown, params.crown_y),
+        (params.cheek_radius, params.cheek_y),
         (params.belly_radius, params.belly_y),
         (params.slot_radius, params.throat_top_y),
         (params.slot_radius, params.throat_bottom_y),
@@ -388,51 +454,73 @@ def aperture(params: Params) -> Sketch:
     for (r1, y1), (r2, y2) in zip(chain, chain[1:]):
         hole += _stadium(r1, y1, r2, y2)
     hole = hole.clean()
-
-    # The one corner a hull cannot round: pick it out by where it has to be
-    # rather than by walking the wire, because the booleans above leave a few
-    # sub-tenth-of-a-millimetre seams that are vertices too, and every one of
-    # them is tangent and wants leaving alone.
-    corners = [
-        v
-        for v in hole.faces()[0].vertices()
-        if abs(abs(v.X) - params.slot_radius) < 1e-3
-        and abs(v.Y - params.corner_y) < 0.5
-    ]
-    if len(corners) != 2:
-        raise RuntimeError(
-            f"expected the funnel to meet the throat at two corners near "
-            f"y={params.corner_y:.2f}, found {len(corners)}"
-        )
-    return fillet(corners, radius=params.blend)
+    return fillet(_pick(hole, params.slot_radius, params.corner_y), radius=params.blend)
 
 
 def profile(params: Params) -> Sketch:
-    """The design, as the one face the whole part is extruded from.
+    """The fixed body's outline: the head's ring, the shoulders, the throat.
 
     The body is the aperture grown outward by one wall and the aperture taken
-    back out of it, which is a constant-width ribbon by construction. The eye
-    lands on top of it and the tail hangs off the bottom; ``clean`` drops the
-    seams both leave, so what comes back is a single face with exactly two
-    holes in it -- the eye's bore and the aperture -- which is the check that
-    all three landed on one another.
+    back out of it, which is a constant-width ribbon by construction. The head
+    is a disc on top of it -- the socket is cut in three dimensions, because it
+    has to swell -- and the two corners where the disc crosses the shoulders
+    are filleted into a neck.
     """
     hole = aperture(params)
     body = offset(hole.faces()[0], params.wall, kind=Kind.ARC) - hole
+    joined = (body + Circle(params.head_radius)).clean()
 
-    eye = Circle(params.eye_outer) - Circle(params.eye_radius)
-    tail = _stadium(
-        params.tail_width / 2,
-        params.tail_top,
-        params.tail_width / 2,
-        params.tail_end + params.tail_width / 2,
+    # Where the head's circle crosses the body's outside, solved rather than
+    # searched for: two circles of known centres and radii.
+    top = params.crown_y + params.crown + params.wall
+    dy = -params.crown_y
+    reach = (dy**2 + params.head_radius**2 - (params.crown + params.wall) ** 2) / (
+        2 * dy
     )
-    return (body + eye + tail).clean()
+    cross_y = params.crown_y + reach
+    cross_x = math.sqrt(max(0.0, params.head_radius**2 - cross_y**2))
+    if cross_y >= top:  # the head swallows the crown; nothing to fillet
+        return joined
+    return fillet(_pick(joined, cross_x, cross_y), radius=params.neck)
+
+
+def _swell(radius: float, params: Params) -> Part:
+    """A disc that is widest at mid height, so it cannot leave its own socket.
+
+    Revolved rather than stacked in slices, because unlike the fidget's rings
+    this one is round: a surface of revolution is exact, and it is also the
+    only shape a bearing can be if it is going to turn.
+    """
+    half = Polygon(
+        (0.0, 0.0),
+        (radius, 0.0),
+        (radius + params.interlock, params.band / 2),
+        (radius, params.band),
+        (0.0, params.band),
+        align=None,
+    )
+    return revolve(Plane.XZ * half, Axis.Z)
+
+
+def collar(params: Params) -> Part:
+    """The turning part: a swollen disc with the lead's slot through it."""
+    params.validate()
+    slot = RectangleRounded(params.slot_width, params.slot_height, params.slot_corner)
+    return _swell(params.collar_radius, params) - extrude(
+        Plane.XY * slot, amount=params.band
+    )
+
+
+def body(params: Params) -> Part:
+    """Everything that does not turn: the head, the shoulders, the throat."""
+    return extrude(Plane.XY * profile(params), amount=params.band) - _swell(
+        params.socket_radius, params
+    )
 
 
 def build(params: Params) -> Part:
-    """One profile, extruded ``band`` up off the plate. That is the entire part."""
-    return extrude(Plane.XY * profile(params), amount=params.band)
+    """Both bodies, in the places they print in. One plate, one go, no chain."""
+    return body(params) + collar(params)
 
 
 if __name__ == "__main__":
@@ -447,7 +535,9 @@ if __name__ == "__main__":
     export_stl(part, str(out / "bag_holder.stl"))
     bb = part.bounding_box()
     lo, hi = p.grip
-    print(f"valid={part.is_valid} solids={len(part.solids())}")
+    print(f"valid={part.is_valid} bodies={len(part.solids())}")
     print(f"bbox={bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm")
-    print(f"{p.eye:.0f} mm eye, {p.belly:.0f} mm belly, {p.slot:.0f} mm throat")
+    print(f"collar {2 * p.collar_radius:.1f} mm over a {p.slot_width:.1f} x "
+          f"{p.slot_height:.1f} mm slot, {p.engagement:.2f} mm engagement, "
+          f"{p.lean:.0f} deg lean")
     print(f"wedges bundles from {lo:.0f} to {hi:.0f} mm across")

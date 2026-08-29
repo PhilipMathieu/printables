@@ -30,6 +30,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 from matplotlib.patches import Circle as CirclePatch
+from matplotlib.patches import FancyBboxPatch
 from matplotlib.patches import Polygon as MplPolygon
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -37,11 +38,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from build123d import Part, export_stl  # noqa: E402
 
 from p2s import inventory, profiles  # noqa: E402
+from geom import webbing  # noqa: E402
 from parts.bag_holder import Params, build, profile  # noqa: E402
 from tools.render import ASA, INK, iso, mesh, plate  # noqa: E402
 
 BAG = "#2f8f5b"
-CHAIN = "#3b6ea5"
+COLLAR = "#3b6ea5"
 
 BUNDLES = (26.0, 17.0, 9.0)
 """Bundles of tied handles to draw, in mm across. A single knot in a thin bag
@@ -73,16 +75,42 @@ def _span(ax, y: float, half: float, label: str, colour: str):
             ha="center", va="bottom", zorder=5)
 
 
+def _collar(ax, params: Params) -> None:
+    """The turning body, in its socket, with the lead's slot through it."""
+    ax.add_patch(CirclePatch((0, 0), params.socket_radius, facecolor="white",
+                             edgecolor=INK, lw=0.9, zorder=3))
+    ax.add_patch(CirclePatch((0, 0), params.collar_radius, facecolor=COLLAR,
+                             alpha=0.28, edgecolor=COLLAR, lw=1.3, zorder=4))
+    ax.add_patch(FancyBboxPatch(
+        (-params.slot_width / 2 + params.slot_corner,
+         -params.slot_height / 2 + params.slot_corner),
+        params.slot_width - 2 * params.slot_corner,
+        params.slot_height - 2 * params.slot_corner,
+        boxstyle=f"round,pad={params.slot_corner}", facecolor="white",
+        edgecolor=COLLAR, lw=1.1, zorder=5))
+
+
 def _design_view(ax, params: Params, face) -> None:
     """The profile, with the three numbers that are the design on it."""
     _outline(ax, face)
+    _collar(ax, params)
 
     ax.annotate(
-        f"{params.eye:.0f} mm eye — a ball chain,\na split ring, a carabiner",
-        xy=(0, 0), xytext=(params.width / 2 + 4, params.eye_outer + 4),
-        fontsize=8.5, color=CHAIN, ha="left", va="bottom",
-        arrowprops=dict(arrowstyle="->", color=CHAIN, lw=1,
-                        connectionstyle="arc3,rad=-0.3"), zorder=5)
+        f"the collar turns in its socket — printed\nthere, {params.gap:.2f} mm "
+        f"clear at every height,\n{params.engagement:.2f} mm of catch holding it in",
+        xy=(params.collar_radius * 0.74, params.collar_radius * 0.68),
+        xytext=(params.width / 2 + 2, params.head_radius + 7),
+        fontsize=8.5, color=COLLAR, ha="left", va="bottom",
+        arrowprops=dict(arrowstyle="->", color=COLLAR, lw=1,
+                        connectionstyle="arc3,rad=-0.3"), zorder=6)
+    ax.annotate(
+        f"the handle, folded,\nthrough {params.slot_width:.0f} × "
+        f"{params.slot_height:.0f} mm",
+        xy=(-params.slot_width / 4, 0),
+        xytext=(-params.width / 2 - 2, params.head_radius + 5),
+        fontsize=8.5, color=COLLAR, ha="right", va="bottom",
+        arrowprops=dict(arrowstyle="->", color=COLLAR, lw=1,
+                        connectionstyle="arc3,rad=0.3"), zorder=6)
 
     _span(ax, params.belly_y, params.belly_radius, f"belly {params.belly:.0f} mm", BAG)
     ax.annotate(
@@ -111,15 +139,8 @@ def _design_view(ax, params: Params, face) -> None:
         xy=(0, mid), xytext=(params.width / 2 + 3, mid),
         fontsize=8.5, color=BAG, ha="left", va="center",
         arrowprops=dict(arrowstyle="->", color=BAG, lw=1), zorder=5)
-    ax.annotate(
-        "tail — what two fingers hold\nwhile the other hand loads it",
-        xy=(0, params.tail_end + params.tail / 2),
-        xytext=(-params.width / 2 - 3, params.tail_end + params.tail / 2),
-        fontsize=8.5, color=INK, ha="right", va="center",
-        arrowprops=dict(arrowstyle="->", color=INK, lw=1), zorder=5)
-
     ax.set_xlim(-params.width / 2 - 30, params.width / 2 + 32)
-    ax.set_ylim(params.tail_end - 4, params.eye_outer + 16)
+    ax.set_ylim(params.aperture_bottom - params.wall - 4, params.head_radius + 26)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title("the design", color=INK, fontsize=11)
@@ -128,6 +149,7 @@ def _design_view(ax, params: Params, face) -> None:
 def _holds_view(ax, params: Params, face) -> None:
     """The funnel doing its one job: stopping each bundle at its own size."""
     _outline(ax, face, lw=1.1)
+    _collar(ax, params)
     for bundle in BUNDLES:
         y = params.seats(bundle)
         ax.add_patch(CirclePatch((0, y), bundle / 2, facecolor=BAG, alpha=0.45,
@@ -139,14 +161,14 @@ def _holds_view(ax, params: Params, face) -> None:
             arrowprops=dict(arrowstyle="->", color=BAG, lw=0.9), zorder=5)
 
     lo, hi = params.grip
-    ax.text(0, params.tail_end - 8,
+    ax.text(0, params.aperture_bottom - params.wall - 8,
             f"between {lo:.0f} and {hi:.0f} mm across, a bundle wedges\n"
             f"in the funnel and never reaches the throat's floor.\n"
             f"Nothing of any size reaches the outside.",
             fontsize=8.5, color=INK, ha="center", va="top", zorder=5)
 
     ax.set_xlim(-params.width / 2 - 8, params.width / 2 + 24)
-    ax.set_ylim(params.tail_end - 22, params.eye_outer + 16)
+    ax.set_ylim(params.aperture_bottom - params.wall - 26, params.head_radius + 22)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title("each bundle stops at its own size", color=INK, fontsize=11)
@@ -178,8 +200,13 @@ def preview(params: Params, dest: Path, part: Part | None = None) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--eye", type=float, default=Params.eye,
-                    help="bore of the ring at the top, in mm")
+    ap.add_argument("--strap", default="standard",
+                    help=f"lead the collar is cut for: "
+                         f"{', '.join(webbing.CATALOGUE)}")
+    ap.add_argument("--gap", type=float, default=Params.gap,
+                    help="clearance between the collar and its socket")
+    ap.add_argument("--interlock", type=float, default=Params.interlock,
+                    help="how much both swell at mid height, to hold the collar in")
     ap.add_argument("--belly", type=float, default=Params.belly,
                     help="widest part of the opening; the biggest bundle that "
                          "can be pushed in")
@@ -189,7 +216,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="degrees off the axis for the taper into the throat")
     ap.add_argument("--throat", type=float, default=Params.throat,
                     help="parallel length of the throat")
-    ap.add_argument("--tail", type=float, default=Params.tail)
+    ap.add_argument("--cheek", type=float, default=Params.cheek,
+                    help="how far the shoulders bow out past a straight flare")
     ap.add_argument("--band", type=float, default=Params.band,
                     help="height of the extrusion, in mm")
     ap.add_argument("--wall", type=float, default=Params.wall,
@@ -205,8 +233,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     params = Params(
-        eye=args.eye, belly=args.belly, slot=args.slot, funnel=args.funnel,
-        throat=args.throat, tail=args.tail, band=args.band, wall=args.wall,
+        strap=webbing.named(args.strap), gap=args.gap, interlock=args.interlock,
+        belly=args.belly, slot=args.slot, funnel=args.funnel, throat=args.throat,
+        cheek=args.cheek, band=args.band, wall=args.wall,
     )
     holders = [build(params) for _ in range(args.copies)]
     part = holders[0] if len(holders) == 1 else plate(holders, nozzle=args.nozzle)
@@ -236,6 +265,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"a {bundle:.0f} mm bundle wedges {below:.0f} mm below the belly")
     print(f"{args.copies} x {params.length:.0f} x {params.width:.0f} mm, wedging "
           f"{lo:.0f}-{hi:.0f} mm bundles")
+    print(f"collar {2 * params.collar_radius:.1f} mm for a {params.strap.nominal} "
+          f"lead, {params.engagement:.2f} mm engagement, leaning "
+          f"{params.lean:.0f} deg")
     bb = part.bounding_box()
     print(f"valid={part.is_valid} {bb.size.X:.1f} × {bb.size.Y:.1f} × "
           f"{bb.size.Z:.1f} mm, {part.volume / 1000:.2f} cm^3")

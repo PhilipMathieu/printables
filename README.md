@@ -19,10 +19,11 @@ funnel never once widens on the way down.
 
 <img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">
 
-A doo loop: an eye at the top for a chain, a wide opening under it, and that
-opening funnelled down into a narrow throat. Push the tied handles through the
-opening, pull down, and they wedge where the funnel gets to their size. There
-is no hook, no gate and no catch in it anywhere.
+A doo loop: a collar at the top that the lead's handle threads through, a wide
+opening under it, and that opening funnelled down into a narrow throat. Push
+the tied handles through the opening, pull down, and they wedge where the
+funnel gets to their size. There is no hook, no gate and no catch in it
+anywhere, and nothing to buy.
 
 Retention is that the aperture is *closed*. It is a hole, not a hook, so
 nothing in it can fall out however hard the lead is swung, and the bag comes
@@ -30,28 +31,32 @@ off the way it went on. A hook has to be either easy to load or hard to unload;
 a closed hole is both, because the direction that gets a bag in is a direction
 gravity never pushes it. What the funnel adds is that you do not have to aim:
 anything landed anywhere in the opening is walked down to the throat by pulling
-on it, and a 26mm bundle stops 9mm below the belly where a 9mm bundle stops 22.
+on it, and a 26mm bundle stops 7mm below the belly where a 9mm bundle stops 20.
 
 ```sh
 python -m tools.bag_holder
-python -m tools.bag_holder --slot 4 --copies 2
+python -m tools.bag_holder --strap wide --slot 4 --copies 2
 ```
 
-It hangs on a ball chain, a split ring or a small carabiner through the eye,
-and that is not decoration — the funnel only works pointing up, and anything
-clamped to the webbing holds the holder square to a lead that is at whatever
-angle the dog has put it. Hung from a point it rights itself, and swings out of
-the way of a knee.
+The collar turns. It is a second body printed inside its own socket in the same
+go, held there because both it and the socket swell at mid height, so its
+widest is wider than either end of the hole it sits in and it cannot be lifted
+out — the fidget's trick, revolved rather than stacked, because unlike a ring
+of nested monotiles this one is round. The gap between them is exactly the same
+at every height, which is what decides whether a print-in-place joint comes off
+the plate turning or comes off fused. It earns its place: the funnel only works
+pointing up, and a collar clamped round webbing points wherever the webbing
+does. One turning joint and the collar goes where the lead puts it while the
+body hangs off it plumb.
 
-The whole part is one profile extruded once and printed lying in the plane it
-was drawn in, so nothing in it overhangs at all. The moulded original is round
-rod, which is the one section that cannot be printed that way — lying down its
-whole underside is an overhang, and standing up the part is a tower of air. The
-ribbon is the aperture offset outward by one wall and nothing else, which is
-how a wire form is made; the hole it leaves is a chain of four circles and the
-tangent hulls between them, so there is no corner in it for a thin plastic
-handle to snag on, bar the one where the funnel meets the throat, which is
-filleted because a hull can only ever bulge the wrong way.
+Everything but the swivel is a profile extruded straight up, so the steepest
+thing anywhere in the part is the swell, at about 17° off vertical — less than
+half of what FDM bridges. The ribbon is the aperture offset outward by one
+wall, which is how a wire form is made; the hole it leaves is a chain of five
+circles and the tangent hulls between them, so there is no corner in it for a
+thin plastic handle to snag on, bar two that turn inward and are filleted
+instead — where the funnel meets the throat, and where the collar's head meets
+the shoulders.
 
 ### Plant clip
 
@@ -104,7 +109,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip catalogue |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip and lead webbing catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
