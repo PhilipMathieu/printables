@@ -6,8 +6,8 @@
 Almost nobody needs to touch any of it. ``--slot`` is the one worth trying a
 second value of, because it is what decides how hard the handles are pinched,
 and how tightly a knotted bag ties is a thing about the bags you buy. After
-that, ``--gap`` if the swivel comes off the plate fused, and ``--strap`` if the
-lead is not a 3/4 inch one.
+that, ``--gap`` if the swivel comes off the plate fused or turns stiffly, and
+``--strap`` if the lead is not a 3/4 inch one.
 
 It is written in ASA unless told otherwise. This is an outdoor part on a lead:
 UV, cold mornings, and the pavement every time it is dropped. Hang it on a ball
@@ -225,6 +225,10 @@ def main(argv: list[str] | None = None) -> int:
                          "room to be worked through")
     ap.add_argument("--edge-break", type=float, default=Params.edge_break,
                     help="chamfer along the top edges")
+    ap.add_argument("--base-break", type=float, default=Params.base_break,
+                    help="chamfer along the plate edges; together with "
+                         "--edge-break this makes the section an octagon. Costs "
+                         "first-layer width, so 0 goes back to a flat foot")
     ap.add_argument("--band", type=float, default=Params.band,
                     help="height of the extrusion, in mm")
     ap.add_argument("--wall", type=float, default=Params.wall,
@@ -244,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
         belly=args.belly, slot=args.slot, funnel=args.funnel, throat=args.throat,
         cheek=args.cheek, band=args.band, wall=args.wall,
         slot_ease=args.slot_ease, edge_break=args.edge_break,
+        base_break=args.base_break,
     )
     holders = [build(params) for _ in range(args.copies)]
     part = holders[0] if len(holders) == 1 else plate(holders, nozzle=args.nozzle)

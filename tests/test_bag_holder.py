@@ -163,10 +163,15 @@ def test_the_collar_cannot_be_lifted_out_of_its_socket(turning):
     """It is fatter in the middle than either end of the hole it sits in, which
     is the only thing holding it in and the reason the swell has to lean."""
     params = Params()
+    socket = _swell(params.socket_radius, params)
     fat = _radius_at(turning, params.band / 2)
-    mouth = _radius_at(_swell(params.socket_radius, params), 0.05)
+    # Either end is a way out, so what holds it is the narrower of the two --
+    # and both are drawn in by their own break, which is why breaking the plate
+    # edge buys catch rather than costing it.
+    mouth = max(_radius_at(socket, 0.02), _radius_at(socket, params.band - 0.02))
     assert fat > mouth
     assert fat - mouth == pytest.approx(params.engagement, abs=0.05)
+    assert params.engagement > params.interlock - params.gap
 
 
 def test_the_gap_is_the_same_at_every_height(turning):
@@ -175,9 +180,11 @@ def test_the_gap_is_the_same_at_every_height(turning):
     here rather than assumed, because a loft would not have been."""
     params = Params()
     socket = _swell(params.socket_radius, params)
-    # Up to the top break, past which the collar is deliberately smaller.
-    top = params.band - params.edge_break - 0.05
-    for z in np.linspace(0.05, top, 7):
+    # The whole height, breaks included: both are the same chain of faces
+    # shifted radially, so there is nowhere the gap is allowed to be anything
+    # else. Before the breaks went into the profile this could only be asked
+    # below them, because the collar was chamfered where its socket was not.
+    for z in np.linspace(0.02, params.band - 0.02, 11):
         gap = _radius_at(socket, z) - _radius_at(turning, z)
         assert gap == pytest.approx(params.gap, abs=0.02), f"at z={z:.2f}"
 
@@ -307,10 +314,10 @@ def test_the_aperture_has_no_corner_to_snag_or_crack_at():
 # --- printability ----------------------------------------------------------
 
 
-def test_the_only_thing_that_leans_anywhere_is_the_swivel(holder):
-    """Everything else is a profile extruded straight up, so the steepest thing
-    in the part is the swell that makes the collar captive -- and that has to
-    stay inside what FDM bridges, because there is no support under a swivel."""
+def test_nothing_overhangs_past_what_fdm_bridges(holder):
+    """Two things in the part lean at all: the plate break, which is a 45 degree
+    chamfer and so sits exactly on the line FDM holds, and the swivel's swell,
+    which is shallower. Everything else is a profile extruded straight up."""
     from tools.render import mesh
 
     params = Params()
@@ -321,20 +328,43 @@ def test_the_only_thing_that_leans_anywhere_is_the_swivel(holder):
     # Overhang is a downward-facing surface, so the sign matters: the top break
     # leans as far as the swell does and faces the other way, which is free.
     on_plate = tri[:, :, 2].max(axis=1) < 1e-6
-    lean = np.degrees(np.arcsin(np.clip(-n[~on_plate, 2], -1, 1)))
-    assert lean.max() < MAX_LEAN
-    # A degree of slack: these are mesh facets, and a chord cuts inside the arc
-    # it stands for, so a faceted cone reads a fraction steeper than it is.
-    assert lean.max() == pytest.approx(params.lean, abs=1.0)
+    lean = np.degrees(np.arcsin(np.clip(-n[:, 2], -1, 1)))
+    centre = tri.mean(axis=1)
 
-    # And it is only the swivel that leans: every sloped facet is out at the
-    # collar's own radius, in the joint, and nowhere else in the part. Five
-    # degrees rather than nought, because the top break is cut as a staircase
-    # and a flat ledge around a curve triangulates a degree or two off level.
-    centre = tri[~on_plate].mean(axis=1)
-    sloped = np.linalg.norm(centre[lean > 5.0][:, :2], axis=1)
-    assert sloped.min() > params.collar_radius - 1
-    assert sloped.max() < params.socket_radius + params.interlock + 1
+    # The plate break is a staircase one layer to a step, so its risers read as
+    # flat downward ledges. Those are not overhangs in any sense that matters --
+    # every sloped surface an FDM printer makes is exactly this -- but they are
+    # 90 degrees to a mesh, so the slope test is about the sloped facets.
+    ledge = (~on_plate) & (lean > 89)
+    assert centre[ledge][:, 2].max() <= params.base_break + 1e-6, (
+        "an unsupported flat has appeared somewhere other than the plate break"
+    )
+
+    # Five degrees rather than nought for the same reason the ledges are
+    # excluded above: a flat ring around a curve triangulates a degree or two
+    # off level, and those facets are the ledges seen edge on.
+    sloped = (~on_plate) & (lean > 5.0) & (lean <= 89)
+    assert lean[sloped].max() <= MAX_LEAN + 0.5
+
+    # And every sloped facet is one of exactly three things: the collar's
+    # underside, the socket's roof, or a 45 degree break. The two cone angles
+    # differ because the swell rises out of the plate break at one end and into
+    # the top break at the other, and each body sees the half that overhangs.
+    known = (params.lean, params.ceiling, 45.0)
+    off = np.min(np.abs(lean[sloped][:, None] - np.array(known)[None, :]), axis=1)
+    assert off.max() < 0.5, (
+        f"a facet leans {lean[sloped][off.argmax()]:.1f} degrees, which is none "
+        f"of {known}"
+    )
+
+
+def test_the_breaks_step_in_one_layer_at_a_time():
+    """Which is what makes the plate break's ledges harmless: each is a single
+    layer's inset, the same step the slicer would have made of a chamfer."""
+    params = Params()
+    for depth in (params.edge_break, params.base_break):
+        steps = max(1, round(depth / params.slice_height))
+        assert depth / steps == pytest.approx(params.slice_height, abs=0.05)
 
 
 def test_the_body_is_its_profile_extruded_less_the_socket(holder, fixed):
@@ -347,26 +377,36 @@ def test_the_body_is_its_profile_extruded_less_the_socket(holder, fixed):
     """
     params = Params()
     face = profile(params).faces()[0]
-    z = 0.5
-    socket_r = params.socket_radius + params.interlock * (2 * z / params.band)
+    # Between the two breaks, where the body really is its own profile.
+    z = (params.base_break + params.band / 2) / 2
+    socket_r = params.socket_radius + params.interlock * (
+        (z - params.base_break) / (params.band / 2 - params.base_break)
+    )
     assert _area_at(fixed, z) == pytest.approx(
         face.area - math.pi * socket_r**2, rel=1e-3
     )
     assert holder.bounding_box().size.Z == pytest.approx(params.band)
 
 
-def test_the_top_edges_are_broken(fixed):
-    """A chamfer all the way round the top, so it is not sharp in a pocket.
-    Measured as the section it takes off: the top is smaller than the body is
-    anywhere below the break."""
+def test_the_ribbon_s_section_is_an_octagon(fixed):
+    """Broken at both ends rather than one, which is what a print asked for: a
+    single chamfer on the top does not read as rounded in the hand.
+
+    The widest thing in the body is the head, so measuring its half width at
+    three heights measures the section: drawn in one chamfer at the plate, full
+    width through the middle, drawn in the other at the top.
+    """
     params = Params()
-    below = params.band - params.edge_break - 0.1
-    assert _area_at(fixed, params.band - 0.05) < _area_at(fixed, below)
-    # And by exactly the break: the widest thing in the body is the head, and
-    # at the top it is one chamfer narrower than it is under the break.
-    assert _radius_at(fixed, params.band - 0.02) == pytest.approx(
-        _radius_at(fixed, below) - params.edge_break, abs=0.05
+    middle = (params.base_break + params.band / 2) / 2
+    full = _radius_at(fixed, middle)
+    assert _radius_at(fixed, 0.02) == pytest.approx(
+        full - params.base_break, abs=0.05
     )
+    assert _radius_at(fixed, params.band - 0.02) == pytest.approx(
+        full - params.edge_break, abs=0.05
+    )
+    assert _area_at(fixed, 0.02) < _area_at(fixed, middle)
+    assert _area_at(fixed, params.band - 0.02) < _area_at(fixed, middle)
 
 
 def test_the_ribbon_is_thicker_than_two_extrusions():
@@ -412,8 +452,10 @@ def test_a_ribbon_of_one_extrusion_is_rejected():
 
 
 def test_a_swell_the_gap_swallows_is_rejected():
+    """Now that the breaks carry part of the catch it takes more to lose it:
+    the swell has to give up more than the shallower break puts back."""
     with pytest.raises(ValueError, match="lifts straight out"):
-        build(Params(interlock=0.3, gap=0.35))
+        build(Params(interlock=0.2, gap=0.5, base_break=0.1))
 
 
 def test_a_swell_too_steep_to_print_is_rejected():
@@ -451,9 +493,19 @@ def test_an_opening_that_does_not_widen_in_order_is_rejected():
         build(Params(cheek=9.0))
 
 
-def test_a_chamfer_that_eats_the_ribbon_is_rejected():
+def test_breaks_that_eat_the_whole_ribbon_are_rejected():
     with pytest.raises(ValueError, match="no flat on top"):
-        build(Params(edge_break=2.0))
+        build(Params(edge_break=3.0))
+
+
+def test_a_break_that_swallows_the_swell_is_rejected():
+    with pytest.raises(ValueError, match="no waist"):
+        build(Params(edge_break=2.2))
+
+
+def test_a_negative_break_is_rejected():
+    with pytest.raises(ValueError, match="burr"):
+        build(Params(base_break=-0.2))
 
 
 def test_an_ease_that_shrinks_the_slot_is_rejected():

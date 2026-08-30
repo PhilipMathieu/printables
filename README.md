@@ -49,22 +49,31 @@ pointing up, and a collar clamped round webbing points wherever the webbing
 does. One turning joint and the collar goes where the lead puts it while the
 body hangs off it plumb.
 
-Everything but the swivel is a profile extruded straight up, so the only thing
-that leans anywhere is the swell, at about 31° off vertical — well inside what
-FDM bridges, and asserted to be out at the collar's radius and nowhere else.
-The ribbon is the aperture offset outward by one wall, which is how a wire form
-is made; the hole it leaves is a chain of five circles and the tangent hulls
-between them, so there is no corner in it for a thin plastic handle to snag on,
-bar two that turn inward and are filleted instead. The top edges are broken,
-which is cut as a stack of insets a layer high rather than as a chamfer,
-because the unions that build the aperture leave seams a few thousandths of a
-millimetre long and no chamfer will run across one.
+Everything but the swivel is a profile extruded straight up. The ribbon is the
+aperture offset outward by one wall, which is how a wire form is made; the hole
+it leaves is a chain of five circles and the tangent hulls between them, so
+there is no corner in it for a thin plastic handle to snag on, bar two that
+turn inward and are filleted instead. Both ends of the section are broken, so
+the ribbon is an octagon rather than a rectangle with two corners off it — cut
+as a stack of insets a layer high rather than as chamfers, because the unions
+that build the aperture leave seams a few thousandths of a millimetre long and
+no chamfer will run across one.
 
-Three of the numbers here came off a print rather than out of the arithmetic:
-it was twice as thick as it needed to be, the collar's slot wanted half again
-in each direction before a folded handle would work through it easily, and a
-rule saying the throat had to be deeper than it was wide turned out to be
-wrong — a 5mm throat grips fine in 4mm of depth.
+Nothing overhangs past 45°, and the test knows exactly what does: every sloped
+facet in either body is within half a degree of one of three angles — the
+collar's underside at 27°, the socket's roof at 32°, or a break at 45. Those
+first two are the same cone seen from opposite sides, because the collar's
+upper half faces the sky while the socket is a cavity closing in over itself.
+
+Five of the numbers here came off prints rather than out of the arithmetic. It
+was twice as thick as it needed to be. The collar's slot wanted half again in
+each direction before a folded handle would work through it easily. A rule
+saying the throat had to be deeper than it was wide turned out to be wrong — a
+5mm throat grips fine in 4mm of depth. Breaking the top edge alone still felt
+sharp, so both ends are broken now. And the swivel turned stiffly, which came
+down to a chamfer cut into a rim that was already tapering, a socket that was
+not broken where its collar was, and a swell steep enough to print rough on the
+one face that has to slide.
 
 ### Plant clip
 

@@ -68,13 +68,18 @@ throat by pulling. Past about 55 degrees off the axis the wall a bundle meets
 is more across than down, it stops walking anything anywhere, and you are back
 to threading a bag into a slot one-handed while a dog pulls.
 
-THE TOP BREAK. Chamfered, because the first print was sharp in the hand. Only
-the top: a break on the plate edge prints just as well the other way up, but
-this is a hundred-odd millimetres of thin ribbon with very little footprint,
-and in ASA every tenth of a millimetre of first-layer width is holding it down.
-It is cut as a stack of insets one printed layer high rather than as a chamfer,
-because the unions that build the aperture leave seams a few thousandths of a
-millimetre long and no chamfer will run across one -- see ``_break_top``.
+THE BREAKS. Both ends, so the ribbon's section is an octagon rather than a
+rectangle: the first print was sharp in the hand, and the second, broken on the
+top alone, still was -- one chamfer on one side does not read as rounded and
+eight short faces very nearly do. The plate break is the smaller of the two,
+because it comes straight off the first layer's width and this is a hundred and
+twenty millimetres of thin ribbon with very little footprint holding it down.
+
+Both are cut as a stack of insets one printed layer high rather than as
+chamfers, because the unions that build the aperture leave seams a few
+thousandths of a millimetre long and no chamfer will run across one -- see
+``_break``. That leaves the plate break's risers as flat downward ledges, one
+layer's inset each, which is exactly what a slicer makes of any chamfer.
 
 Print it in ASA. This lives outdoors on a lead: UV, cold mornings, and the
 pavement every time it is dropped. PLA is the one that goes brittle in the
@@ -151,9 +156,15 @@ class Params:
     gap: float = 0.35
     """Clearance between the collar and its socket, radially, at every height.
     The one number that decides whether it comes off the plate turning."""
-    interlock: float = 1.2
-    """How much both surfaces swell at mid height. What is left after the gap
-    is what actually holds the collar in -- see ``engagement``."""
+    interlock: float = 0.7
+    """How much both surfaces swell at mid height.
+
+    Down from 1.2 once the plate break started carrying part of the catch. The
+    swell's underside is an overhang and the roughest face in the part, and it
+    is also the face the joint slides on, so the shallower it can be made the
+    better it turns -- which is the complaint this is answering. Engagement
+    still comes out ahead of where it was, because the break at each end draws
+    the socket's mouth in by more than this gave up."""
     collar_wall: float = 2.6
     """Ribbon around the collar's own slot. Thinner than ``wall`` because it is
     a hoop in compression rather than a link in tension, and because every
@@ -204,15 +215,25 @@ class Params:
     slice_height: float = 0.2
     """Step the top break is cut in. One printed layer, so it never shows --
     the same argument, and the same number, as the fidget's stacked profile."""
-    edge_break: float = 0.6
-    """Chamfer along the top edges, so the thing is not sharp in a pocket.
+    edge_break: float = 0.9
+    """Chamfer along the top edges."""
+    base_break: float = 0.6
+    """Chamfer along the plate edges. Together with ``edge_break`` this makes
+    the ribbon's section an octagon rather than a rectangle with its top two
+    corners knocked off, which is what a print said it wanted: one chamfer on
+    one side does not read as rounded in the hand, and eight short faces very
+    nearly do.
 
-    The top only. A chamfer on the plate edge would be the same 45 degrees the
-    other way up, which prints, but this part is a hundred millimetres of thin
-    ribbon with very little footprint, and in ASA every tenth of a millimetre
-    of first-layer width is holding it down. The plate face comes off with the
-    plate's own break on it anyway, and elephant's foot is a slicer setting.
-    """
+    Smaller than the top, and that is the one real cost of breaking this edge
+    at all: it comes straight off the first layer's width, and this part is a
+    hundred and twenty millimetres of thin ribbon with very little footprint
+    holding it to the plate. Set them equal for a properly regular section if
+    the plate is behaving; set this to nought to go back to a flat foot.
+
+    It also does something the top break cannot: it relieves the squash at the
+    bottom of the swivel. Elephant's foot spreads the collar and its socket
+    towards each other across the one gap that has to stay open, and on a 4mm
+    part that first layer is a quarter of the whole joint."""
 
     # --- the collar and its socket ----------------------------------------
 
@@ -243,13 +264,43 @@ class Params:
 
     @property
     def engagement(self) -> float:
-        """How much of the swell holds the collar in, past the clearance."""
-        return self.interlock - self.gap
+        """How much wider the collar's waist is than the socket's mouth.
+
+        The swell past the clearance, plus whichever break is the shallower:
+        the collar leaves by the easier of the two ends, and both ends of the
+        socket are drawn in by their own break. Which is why breaking the plate
+        edge buys catch rather than costing it.
+        """
+        return self.interlock - self.gap + min(self.edge_break, self.base_break)
 
     @property
     def lean(self) -> float:
-        """Degrees off vertical of the swell: the steepest thing in the part."""
-        return math.degrees(math.atan(self.interlock / (self.band / 2)))
+        """Degrees off vertical of the swell's underside on the collar.
+
+        The face the joint slides on, and an overhang, so also the roughest
+        face in the part -- which is why it is worth keeping shallow. Measured
+        from where the swell actually starts, which is the top of the plate
+        break rather than the plate: breaking that edge shortens the run the
+        swell rises over and steepens it.
+        """
+        return math.degrees(
+            math.atan(self.interlock / (self.band / 2 - self.base_break))
+        )
+
+    @property
+    def ceiling(self) -> float:
+        """Degrees off vertical of the socket's roof, above the swell.
+
+        The same cone seen from the other side and from the other end: where
+        the collar's upper half faces the sky and prints over nothing, the
+        body's socket is a cavity closing in over itself, so it is the upper
+        half that overhangs there. It answers to ``edge_break`` the way the
+        collar's underside answers to the plate break, and being the steeper of
+        the two it is what the printability check has to be run against.
+        """
+        return math.degrees(
+            math.atan(self.interlock / (self.band / 2 - self.edge_break))
+        )
 
     @property
     def bearing_area(self) -> float:
@@ -388,12 +439,14 @@ class Params:
                 f"{self.engagement:.2f}mm holding the collar in, which is nothing: "
                 f"it lifts straight out of its socket"
             )
-        if self.lean > MAX_LEAN:
+        if max(self.lean, self.ceiling) > MAX_LEAN:
             raise ValueError(
-                f"swelling {self.interlock}mm over {self.band / 2}mm leans the "
-                f"socket {self.lean:.0f} degrees off vertical, past the "
-                f"{MAX_LEAN:.0f} FDM holds unsupported. Raise the band, or swell "
-                f"less and accept the shallower catch."
+                f"swelling {self.interlock}mm leans the joint "
+                f"{max(self.lean, self.ceiling):.0f} degrees off vertical -- the "
+                f"collar's underside {self.lean:.0f}, the socket's roof "
+                f"{self.ceiling:.0f} -- past the {MAX_LEAN:.0f} FDM holds "
+                f"unsupported. Raise the band, shrink a break, or swell less and "
+                f"take the catch back off the breaks."
             )
         if self.joint >= self.wall:
             raise ValueError(
@@ -425,11 +478,25 @@ class Params:
             )
         if not 0 < self.shoulder < 90:
             raise ValueError(f"a {self.shoulder} degree shoulder is not a flare")
-        if self.edge_break >= min(self.wall, self.band) / 2:
+        if min(self.edge_break, self.base_break) < 0:
+            raise ValueError("a negative chamfer is a burr")
+        if self.edge_break + self.base_break >= self.wall:
             raise ValueError(
-                f"a {self.edge_break}mm chamfer eats a {self.wall}mm ribbon "
-                f"{self.band}mm tall from both sides at once, leaving no flat on "
-                f"top of it and no wall to speak of"
+                f"breaks of {self.edge_break} and {self.base_break}mm take the "
+                f"whole of a {self.wall}mm ribbon from both sides at once, "
+                f"leaving no flat on top of it and no wall to speak of"
+            )
+        if max(self.edge_break, self.base_break) >= self.band / 2:
+            raise ValueError(
+                f"a {max(self.edge_break, self.base_break)}mm break on a "
+                f"{self.band}mm band runs past half its height, so the two ends "
+                f"of the swivel's swell meet in the middle and it has no waist "
+                f"left to be caught by"
+            )
+        if max(self.edge_break, self.base_break) >= self.collar_radius:
+            raise ValueError(
+                f"a {max(self.edge_break, self.base_break)}mm break is deeper "
+                f"than the {self.collar_radius:.1f}mm collar is wide"
             )
         if self.slot_ease < 1:
             raise ValueError(
@@ -528,20 +595,35 @@ def _swell(radius: float, params: Params) -> Part:
     Revolved rather than stacked in slices, because unlike the fidget's rings
     this one is round: a surface of revolution is exact, and it is also the
     only shape a bearing can be if it is going to turn.
+
+    The edge breaks are in the profile rather than cut into it afterwards, and
+    that is not tidiness. A rim that is already tapering inward towards the top
+    and then has a chamfer taken out of it gets a kink in it where the taper
+    suddenly steepens, and a stepped one at that, sitting directly on the
+    surface the joint has to turn against. Drawn as one chain of faces it is
+    six straight facets from plate to top and the bearing keeps its own shape.
+
+    It also costs nothing in catch. Both breaks fall outside the constriction
+    -- the socket's narrowest is still where the swell starts, not at its mouth
+    -- so the collar's widest is wider than its socket's tightest by as much as
+    it ever was, and the gap between the two is still ``gap`` at every height,
+    because both profiles are this same chain shifted radially.
     """
     half = Polygon(
         (0.0, 0.0),
-        (radius, 0.0),
+        (radius - params.base_break, 0.0),
+        (radius, params.base_break),
         (radius + params.interlock, params.band / 2),
-        (radius, params.band),
+        (radius, params.band - params.edge_break),
+        (radius - params.edge_break, params.band),
         (0.0, params.band),
         align=None,
     )
     return revolve(Plane.XZ * half, Axis.Z)
 
 
-def _break_top(solid: Part, top: Sketch, params: Params) -> Part:
-    """Chamfer every top edge, cut as a stack of insets rather than chamfered.
+def _break(solid: Part, outline: Sketch, params: Params, grow: bool = False) -> Part:
+    """Chamfer the top and plate edges of ``outline``, as a stack of insets.
 
     OCCT will not chamfer the body's top wire, and it is worth saying why
     rather than reaching for a smaller number: the unions that build the
@@ -554,15 +636,23 @@ def _break_top(solid: Part, top: Sketch, params: Params) -> Part:
     face above it, the staircase is at the layer height the slicer would have
     discretised to anyway, and none of it depends on an operation that has an
     opinion about how short an edge is allowed to be.
+
+    ``grow`` says which way the boundary runs. An outline is broken by insetting
+    it, a hole by letting it out; the collar's slot is the second kind.
     """
-    if params.edge_break <= 0:
-        return solid
-    steps = max(1, round(params.edge_break / params.slice_height))
-    cut = params.edge_break / steps
-    for k in range(steps):
-        ring = top - offset(top, -(k + 1) * cut, kind=Kind.ARC, min_edge_length=0.05)
-        z = params.band - params.edge_break + k * cut
-        solid -= extrude(Plane.XY.offset(z) * ring, amount=cut)
+    for depth, at_top in ((params.edge_break, True), (params.base_break, False)):
+        if depth <= 0:
+            continue
+        steps = max(1, round(depth / params.slice_height))
+        cut = depth / steps
+        for k in range(steps):
+            back = depth - k * cut if not at_top else (k + 1) * cut
+            moved = offset(
+                outline, back if grow else -back, kind=Kind.ARC, min_edge_length=0.05
+            )
+            ring = moved - outline if grow else outline - moved
+            z = params.band - depth + k * cut if at_top else k * cut
+            solid -= extrude(Plane.XY.offset(z) * ring, amount=cut)
     return solid
 
 
@@ -573,8 +663,9 @@ def collar(params: Params) -> Part:
     turning = _swell(params.collar_radius, params) - extrude(
         Plane.XY * slot, amount=params.band
     )
-    top = (Circle(params.collar_radius) - slot).faces()[0]
-    return _break_top(turning, top, params)
+    # Only the slot: the rim's breaks are already in the revolved profile, and
+    # cutting them again is exactly what put a kink in the bearing.
+    return _break(turning, slot.faces()[0], params, grow=True)
 
 
 def body(params: Params) -> Part:
@@ -587,9 +678,7 @@ def body(params: Params) -> Part:
     the joint where no thumb reaches anyway.
     """
     face = profile(params).faces()[0]
-    outline = _break_top(
-        extrude(Plane.XY * face, amount=params.band), face, params
-    )
+    outline = _break(extrude(Plane.XY * face, amount=params.band), face, params)
     return outline - _swell(params.socket_radius, params)
 
 
