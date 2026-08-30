@@ -12,6 +12,7 @@ dependencies = [
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "pytest>=9.1.1",
+    "shapely>=2.1.2",
 ]
 
 [tool.pytest.ini_options]

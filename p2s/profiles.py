@@ -37,7 +37,11 @@ def _read(kind: str, name: str) -> dict:
     path = PROFILE_ROOT / kind / f"{name}.json"
     if not path.exists():
         raise ProfileError(f"no {kind} profile {name!r} at {path}")
-    return json.loads(path.read_text())
+    # Explicitly UTF-8: several Bambu presets carry non-ASCII characters in
+    # their names, and read_text() otherwise decodes with the platform default,
+    # which is ASCII whenever the process runs without a locale set. That makes
+    # profile lookup work in a terminal and blow up under a runner.
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @lru_cache(maxsize=None)
