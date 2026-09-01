@@ -15,6 +15,63 @@ funnel never once widens on the way down.
 
 ## What's in it
 
+### Drill press dog set
+
+<img src="docs/bench_dogs.png" alt="Dog set: the parts as they print, the set in use holding an enclosure, and a stop sectioned in its hole" width="100%">
+
+Workholding for a Craftsman 335.25921 — which is not a drill press but a *stand*
+that a portable drill clamps into, with a cast base whose only fixturing is four
+T-bolt slots in an X. As a coordinate system that is close to useless, so the
+first part is a deck that replaces it: a plate of half-inch holes on a one inch
+pitch that bolts down through those slots once and is never taken off. Then
+stops, a fence, a screw clamp, a floating pad and sacrificial backers, all
+plugging into the same grid.
+
+```sh
+python -m tools.bench_dogs --part ladder      # print this first
+python -m tools.bench_dogs --part deck
+python -m tools.bench_dogs --set
+```
+
+The only force worth designing against is torque. Thrust goes straight down into
+the deck and needs nothing; a bit grabbing wants to spin the work out of your
+fingers, and the whole set exists to route that into the casting through
+something that is not your fingers. Work bears on a printed face, the face on a
+shank, the shank on the wall of a hole — plastic in compression and bearing the
+whole way, no printed threads, nothing glued, nothing in tension across its
+layers. The one steel part is an M6 bolt in the clamp, and it is steel precisely
+because it is the one thing that has to pull.
+
+The stops are round, which sounds like laziness and is the point: a round dog
+touches an edge exactly `head/2` from its hole's centre whichever way it was
+dropped in, so it never needs orienting and its position is known from the grid
+before anything is printed. The fence is 16mm thick for the same reason the head
+is 16mm across — at exactly that thickness the two faces are coplanar, so a
+fence over four pitches and a stop six pitches out are one straight reference
+rather than two things at slightly different depths.
+
+The clamp is a screw and not a cam or a wedge because the gap between a
+workpiece and the nearest hole is anything up to a full pitch. An eccentric with
+25mm of throw would not be self-locking and a folding wedge pair would be 28mm
+thick at the fat end; an M6 × 60 costs pennies and puts the plastic back into
+compression. Whether it reaches further than the pitch is checked, because a
+clamp that does not leaves a band of workpiece sizes that cannot be held at all.
+
+Everything prints the same way up — seating faces to the sky, shanks pointing
+up, which is upside down from how they are used. That falls out of one rule: a
+shank is always narrower than what it grows out of, so putting it last makes
+every change of section a step inward, and not one facet in the set overhangs.
+Two places needed help. The clamp's bolt bore is a teardrop rather than a
+circle, and its nut trap gets the same 45° gable — a bare hexagon is unprintable
+lying down whichever way it is turned, point-up worst of all at 60° off
+vertical, which is the opposite of the usual advice because the usual advice is
+about traps bored vertically.
+
+Print in ASA. The shank clearance is the one number here that cannot be reasoned
+out — it depends on the deck, and a printed deck and a plywood one are not the
+same hole — so `--part ladder` prints four stops at four fits and the tightest
+that still drops in under its own weight is the answer for everything else.
+
 ### Poop bag holder
 
 <img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">
@@ -126,7 +183,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip and lead webbing catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and dog hole grid catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
