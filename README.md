@@ -37,10 +37,23 @@ The only force worth designing against is torque. Thrust goes straight down into
 the deck and needs nothing; a bit grabbing wants to spin the work out of your
 fingers, and the whole set exists to route that into the casting through
 something that is not your fingers. Work bears on a printed face, the face on a
-shank, the shank on the wall of a hole — plastic in compression and bearing the
-whole way, no printed threads, nothing glued, nothing in tension across its
-layers. The one steel part is an M6 bolt in the clamp, and it is steel precisely
-because it is the one thing that has to pull.
+shank, the shank on the wall of a hole — compression and bearing nearly the
+whole way, and no printed threads anywhere.
+
+Nearly, because every shank prints with its layers across its axis, so a side
+load bends it at the root in layer-line tension. For a stop taking drill torque
+that is nothing. For the clamp it need not be, because the largest force in the
+assembly is not the drill — it is the clamp's own screw, and an M6 wound up with
+a tool reaches thousands of newtons. So every shank root gets a 45° cone, which
+is a fillet in the only direction that still prints, and which costs nothing
+because it rides inside the lead-in chamfer already at the mouth of each hole.
+And the bolt wants a knob or a wing head, not a hex, so that what a hand can
+apply is the limit rather than the plastic being it.
+
+A nicer consequence of the load path than it first looks: a fence and a clamp
+holding one workpiece push against each other and both reactions land in the
+same plate, so the loop closes inside the deck. The four ¼-20s into the casting
+hold the deck flat and locate it, and that is all they ever do.
 
 The stops are round, which sounds like laziness and is the point: a round dog
 touches an edge exactly `head/2` from its hole's centre whichever way it was
@@ -54,8 +67,20 @@ The clamp is a screw and not a cam or a wedge because the gap between a
 workpiece and the nearest hole is anything up to a full pitch. An eccentric with
 25mm of throw would not be self-locking and a folding wedge pair would be 28mm
 thick at the fat end; an M6 × 60 costs pennies and puts the plastic back into
-compression. Whether it reaches further than the pitch is checked, because a
-clamp that does not leaves a band of workpiece sizes that cannot be held at all.
+compression. The window of gaps it can close — 4 to 34mm, the pad shifting both
+ends out rather than shortening it — has to be wider than the pitch, and that is
+checked, because a clamp narrower than the pitch leaves a band of workpiece
+sizes that fall between two rows and cannot be held at all.
+
+Which face the nut trap opens on turned out to be the whole clamp. It opens on
+the *front*, towards the work: the tip pushes the work, so the work pushes back
+along the bolt, so the bolt drags the nut rearward, and the nut therefore needs
+plastic behind it — 24mm of it, in compression. Cut into the back face instead,
+which is the intuitive place since that is the end the bolt goes in, and the
+pocket opens in the direction the load pushes. The nut walks out of it on the
+first turn of the screw. That is how this was drawn first, and it is the one
+mistake in the set that would have been discovered by printing it rather than by
+reading it.
 
 Everything prints the same way up — seating faces to the sky, shanks pointing
 up, which is upside down from how they are used. That falls out of one rule: a
@@ -66,6 +91,12 @@ circle, and its nut trap gets the same 45° gable — a bare hexagon is unprinta
 lying down whichever way it is turned, point-up worst of all at 60° off
 vertical, which is the opposite of the usual advice because the usual advice is
 about traps bored vertically.
+
+The sacrificial backers are sized off the hole and never off a dog's shank — a
+puck measured against the shank inherits whatever fit the dogs happen to be cut
+to, and at a loose fit it comes out smaller than the hole and drops through the
+one station it is ever used at, which is the one with the casting's open
+clearance hole underneath.
 
 Print in ASA. The shank clearance is the one number here that cannot be reasoned
 out — it depends on the deck, and a printed deck and a plywood one are not the

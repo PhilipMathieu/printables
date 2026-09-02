@@ -142,7 +142,8 @@ def _plan_view(ax, params: bench_dogs.Params, deck: dog_deck.Params) -> None:
                              edgecolor="none"))
     ax.annotate(
         f"M6 bridges the {gap:.0f} mm the grid left over\n"
-        f"(it reaches {params.travel:.0f}, and the pitch is {pitch:.1f})",
+        f"(it closes {params.reach_window[0]:.0f}-{params.reach_window[1]:.0f}, "
+        f"and the pitch is {pitch:.1f})",
         xy=(cx, front + gap / 2), xytext=(deck.width / 2 - 4, clamp_y - 6),
         fontsize=8.5, color=INK, ha="right", va="top",
         arrowprops=dict(arrowstyle="->", color=INK, lw=0.9,
@@ -197,7 +198,8 @@ def _fit_view(ax, params: bench_dogs.Params, deck: dog_deck.Params) -> None:
         (0, t - params.shank_length),
         (rs - lead, t - params.shank_length),
         (rs, t - params.shank_length + lead),
-        (rs, t),
+        (rs, t - params.root),
+        (rs + params.root, t),
         (rh, t),
         (rh, top - brk),
         (rh - brk, top),
@@ -216,8 +218,15 @@ def _fit_view(ax, params: bench_dogs.Params, deck: dog_deck.Params) -> None:
                         connectionstyle="arc3,rad=0.2"),
     )
     ax.annotate(
+        f"{params.root:.1f} mm root cone, riding in\nthe hole's own chamfer",
+        xy=(rs + params.root / 2, t - params.root / 2),
+        xytext=(-span, top + 1), fontsize=8.5, color=INK, ha="left", va="bottom",
+        arrowprops=dict(arrowstyle="->", color=INK, lw=0.9,
+                        connectionstyle="arc3,rad=0.2"),
+    )
+    ax.annotate(
         f"reach {params.reach:.1f} mm, in every direction",
-        xy=(rh, t + params.rise / 2), xytext=(span * 0.55, top + 5),
+        xy=(rh, t + params.rise / 2), xytext=(span, top + 13),
         fontsize=8.5, color=INK, ha="right", va="bottom",
         arrowprops=dict(arrowstyle="->", color=INK, lw=0.9,
                         connectionstyle="arc3,rad=-0.25"),
@@ -225,7 +234,7 @@ def _fit_view(ax, params: bench_dogs.Params, deck: dog_deck.Params) -> None:
     ax.plot([-span, span], [t, t], color=INK, lw=0.8, ls=(0, (5, 4)))
 
     ax.set_xlim(-span, span)
-    ax.set_ylim(-12, top + 12)
+    ax.set_ylim(-12, top + 22)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title(

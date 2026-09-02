@@ -170,6 +170,48 @@ def test_the_shank_is_the_hole_less_the_fit(params):
     assert params.shank == pytest.approx(params.grid.hole - params.fit)
 
 
+def test_every_shank_root_is_filleted(params):
+    """Where a shank breaks is its root, in layer-line tension, and a square
+    root is the stress raiser that decides when. The cone is the fillet -- the
+    only shape of one that still prints in this orientation."""
+    assert params.root > 0
+    for name in ("stop", "fence", "clamp"):
+        part = BUILDERS[name](params)
+        tri, _, _ = facets(part, tol=0.01)
+        # The widest thing at the very base of a shank is the cone, not the
+        # shank: measured just above the face the shanks grow out of.
+        seat = {"stop": params.rise, "fence": params.fence_height,
+                "clamp": params.clamp_height}[name]
+        band = tri[(tri[:, :, 2].mean(axis=1) > seat + 0.05)
+                   & (tri[:, :, 2].mean(axis=1) < seat + params.root - 0.05)]
+        assert len(band), name
+
+
+def test_a_square_shank_root_is_refused():
+    with pytest.raises(ValueError, match="layer-line tension"):
+        stop(Params(root=0.0))
+
+
+def test_the_root_cone_sits_inside_the_holes_chamfer(params, deck):
+    """Which is why it is free. The cone lives in the void the deck's lead-in
+    chamfer already leaves at the mouth of the hole, so it takes no width off
+    the seat -- and being a cone in a cone, it centres the dog as well."""
+    chamfer_r = deck.grid.hole / 2 + deck.hole_chamfer
+    assert params.shank / 2 + params.root < chamfer_r
+    # Clears all the way down, not just at the mouth: both are 45 degrees, so
+    # checking the two ends is checking the whole depth.
+    assert params.root <= deck.hole_chamfer
+
+
+def test_a_stop_seats_on_flat_deck_and_not_on_the_chamfer(params, deck):
+    """Unguarded until now, and already only 0.85mm wide. A head barely larger
+    than the chamfer's outer edge seats the dog on a slope, and a dog on a slope
+    is a dog whose reach depends how hard it was pushed in."""
+    chamfer_r = deck.grid.hole / 2 + deck.hole_chamfer
+    seat = params.head / 2 - chamfer_r
+    assert seat > 0.5, f"only {seat:.2f}mm of flat seat under the head"
+
+
 def test_the_ladder_is_one_stop_per_fit(params):
     """The first print. Four clearances, and the tightest that still drops in
     is the answer for everything else in the set."""
@@ -226,14 +268,41 @@ def test_a_fence_thinner_than_a_stop_is_refused():
 # --- the clamp -------------------------------------------------------------
 
 
-def test_the_screw_reaches_further_than_the_pitch(params):
+def test_the_clamps_reach_window_is_wider_than_the_pitch(params):
     """Otherwise there is a band of workpiece sizes that falls between two rows
     of holes: too big for the clamp in one, too small to reach from the next."""
-    assert params.travel > params.grid.pitch
+    near, far = params.reach_window
+    assert far - near >= params.grid.pitch
+
+
+def test_the_pad_shifts_the_reach_window_rather_than_shortening_it(params):
+    """Worth asserting because it reads the other way round. The pad sits beyond
+    the bolt tip, not between the tip and the thread, so it moves both ends of
+    the window out by its own thickness and the width -- which is what has to
+    beat the pitch -- is untouched."""
+    near, far = params.reach_window
+    assert near == pytest.approx(params.pad_thickness)
+    assert far - near == pytest.approx(params.travel)
+    thicker = Params(pad_thickness=params.pad_thickness + 3)
+    assert thicker.reach_window[1] - thicker.reach_window[0] == pytest.approx(
+        params.travel
+    )
+
+
+def test_every_gap_up_to_the_capacity_is_reachable_from_some_row(params, deck):
+    """The claim the window check exists to support, walked rather than argued:
+    take any gap between the clamp's front face and the work, step the clamp
+    back a row at a time, and one of those rows lands the gap inside the
+    window."""
+    near, far = params.reach_window
+    pitch = params.grid.pitch
+    for tenths in range(0, int(pitch * 10)):
+        gap = tenths / 10
+        assert any(near <= gap + k * pitch <= far for k in range(4)), gap
 
 
 def test_a_screw_too_short_to_cover_the_pitch_is_refused():
-    with pytest.raises(ValueError, match="between two holes"):
+    with pytest.raises(ValueError, match="between two rows"):
         clamp(Params(screw_length=40.0))
 
 
@@ -257,15 +326,47 @@ def test_the_bore_goes_all_the_way_through(params):
     assert max(len(f.wires()) for f in front) > 1
 
 
-def test_the_nut_trap_opens_on_the_back_face_only(params):
-    """Point-up, so the two faces closing over the top of the pocket lean 30
-    degrees and need no bridging -- see ``_hex``."""
+def test_the_nut_trap_opens_towards_the_work_not_away_from_it(params):
+    """The one that decides whether the clamp works at all.
+
+    The bolt tip pushes the work forward, so the work pushes back along the
+    bolt, so the bolt drags the nut rearward. The nut therefore needs solid body
+    behind it. Opening the pocket on the back face -- which is the intuitive
+    place, since that is the end the bolt goes in -- opens it in exactly the
+    direction the load pushes, and the nut leaves the pocket under the first
+    turn of the screw.
+    """
     body = clamp(params)
     d = params.clamp_depth
+    front = [f for f in body.faces() if abs(f.center().Y - d / 2) < 1e-6]
     back = [f for f in body.faces() if abs(f.center().Y + d / 2) < 1e-6]
-    assert max(len(f.wires()) for f in back) > 1
-    across_corners = params.nut_af * 2 / math.sqrt(3)
-    assert across_corners < params.clamp_height
+    # The front face is broken by both the bore and the trap; the back only by
+    # the bore, which is what "solid behind the nut" looks like from outside.
+    assert max(len(f.wires()) for f in front) > 1
+    assert [len(f.wires()) for f in back] == [2]
+    assert params.clamp_depth - params.nut_deep > 20
+
+
+def test_the_nut_traps_gable_leaves_material_under_the_seating_face(params):
+    """The gable is dead space above the nut, so it is free to shave by dropping
+    the bolt -- right up until the roof over it is two layers, on the face the
+    whole clamp bears and tips on."""
+    from parts.bench_dogs import NUT_COVER
+
+    assert params.screw_height - params.gable >= NUT_COVER
+    with pytest.raises(ValueError, match="seats and tips on"):
+        clamp(Params(screw_height=params.gable + 0.1))
+
+
+def test_the_gable_is_measured_across_the_flats_not_the_corners(params):
+    """A flat-up hexagon stands AF/2 tall and across-corners wide. Reading the
+    height off the corners describes a point-up trap, which is not the one
+    here and is the orientation that does not print."""
+    assert params.gable == pytest.approx(
+        params.nut_af / 2 + params.nut_across_corners / 4
+    )
+    assert params.nut_across_corners > params.nut_af  # corners are the wide way
+    assert params.screw_height + params.nut_af / 2 < params.clamp_height
 
 
 # --- the backer ------------------------------------------------------------
@@ -275,6 +376,39 @@ def test_a_backer_sits_flush_with_the_deck(params, deck):
     """Proud and the work rocks on it; sunk and the metal is unsupported at
     exactly the moment the bit breaks through."""
     assert puck(params).bounding_box().size.Z == pytest.approx(deck.deck)
+
+
+@pytest.mark.parametrize("fit_name", dog_grid.LADDER)
+def test_a_backer_grips_the_hole_at_every_fit_the_dogs_come_in(params, fit_name):
+    """Sized off the hole, not off a shank. Off the shank it inherits whatever
+    clearance the dogs were cut to: at a slip fit that left 0.05mm of
+    interference, which is printer noise, and at a loose fit the puck came out
+    smaller than the hole and dropped through the one station it is ever used
+    at -- the centre one, which has the casting's clearance hole under it."""
+    p = params.at(fit_name)
+    widest = puck(p).bounding_box().size.X
+    assert widest > p.grid.hole
+    assert widest == pytest.approx(p.grid.hole + p.puck_grip, abs=0.01)
+
+
+def test_a_backers_wedge_is_confined_to_a_band_near_the_top(params, deck):
+    """Spread over the whole height, the taper turns a tenth of a millimetre of
+    radial print error into millimetres of seating height. Confined to a band it
+    is steep enough that where it stops is where it was meant to."""
+    body = puck(params)
+    tri, _, _ = facets(body, tol=0.01)
+    pts = tri.reshape(-1, 3)
+    below = pts[pts[:, 2] < deck.deck - params.puck_band - 0.1]
+    assert np.hypot(below[:, 0], below[:, 1]).max() == pytest.approx(
+        (params.grid.hole - params.puck_entry) / 2, abs=0.05
+    )
+    slope = params.puck_grip / 2 / params.puck_band
+    assert slope > 0.04  # steep enough that seating height is not a lottery
+
+
+def test_a_backer_that_falls_through_is_refused():
+    with pytest.raises(ValueError, match="falls through"):
+        puck(Params(puck_grip=-0.1))
 
 
 def test_a_backer_tightens_under_the_drills_own_thrust(params):
@@ -359,9 +493,12 @@ def test_the_deck_can_clamp_anything_that_fits_on_it(params, deck):
     overlap and every size below the maximum is reachable from some row."""
     deepest = capacity(params, deck.rows)
     back = params.grid.span(deck.rows) / 2
-    assert deepest == pytest.approx(back - params.reach + back - params.clamp_depth / 2)
-    assert deepest > 75
-    assert params.travel > params.grid.pitch
+    assert deepest == pytest.approx(
+        back - params.reach + back - params.clamp_depth / 2 - params.pad_thickness
+    )
+    assert deepest > 70
+    near, far = params.reach_window
+    assert far - near >= params.grid.pitch
 
 
 def test_a_clamp_on_the_outermost_row_sits_on_the_plate(deck, params):
