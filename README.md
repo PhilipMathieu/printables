@@ -98,8 +98,44 @@ to, and at a loose fit it comes out smaller than the hole and drops through the
 one station it is ever used at, which is the one with the casting's open
 clearance hole underneath.
 
+#### Printed or wooden
+
+Wood is the better material for the deck in every respect but one. It is
+stiffer, it does not creep under a clamp left tight for a week, it does not mind
+being drilled into, it costs nothing, and it cannot warp on a build plate —
+which is the real risk in a printed plate 184mm long, and the one thing about
+this design that a print either survives or does not. MDF over ply, for hole
+quality and because it moves less with the weather.
+
+The one thing printing wins is accuracy, and on inspection that is not an
+argument for plastic at all — it is an argument against marking out by hand. So
+`--part template` is a printed lattice that pilots every station off the same
+numbers the plate is built from: clamp it to a board, run a 3mm bit through
+every hole, then bore the half-inch holes to the pilots. A fifth of the deck to
+print, and the wooden deck comes out with the grid exactly. Print the plate to
+get going and cut the wooden one when the numbers have stopped moving.
+
+#### Finding the numbers that are left
+
+Everything settleable by arithmetic is settled and checked on every build. Four
+things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
+
+| | print | what it tells you |
+|---|---|---|
+| `--part ladder` | 20 min | shank clearance: keep the tightest that drops in under its own weight |
+| `--part arm` | 20 min | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight |
+| `--part strip` | 35 min | whether a plate this long comes off the bed flat, before committing six hours to finding out |
+| `--part pucks` | 10 min | which backer interference seats flush and still grips |
+
+The arm is the one worth doing. A 12.35mm shank has a section modulus of
+185mm³, so somewhere between 20 and 35 MPa of layer adhesion it lets go between
+3.7 and 6.5 N·m — against 2.1 N·m from the clamp at a mild 200N on the screw.
+That is a factor of two, and an M6 wound up with a tool reaches ten times it.
+Watch where the arm breaks: at the root means the fillet is the limit, up the
+shank means it moved the weak point somewhere the design does not care about.
+
 Print in ASA. The shank clearance is the one number here that cannot be reasoned
-out — it depends on the deck, and a printed deck and a plywood one are not the
+out — it depends on the deck, and a printed deck and a wooden one are not the
 same hole — so `--part ladder` prints four stops at four fits and the tightest
 that still drops in under its own weight is the answer for everything else.
 
@@ -215,7 +251,7 @@ rings turns the same part into a coaster.
 | | |
 |---|---|
 | `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and dog hole grid catalogues |
-| `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
+| `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance, and `dog_rig` for the pieces printed to find a number out rather than to use |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
 | `tests/` | Design intent, asserted against the built solid |

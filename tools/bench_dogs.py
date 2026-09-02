@@ -38,7 +38,7 @@ from build123d import Part, export_stl  # noqa: E402
 
 from geom import dog_grid  # noqa: E402
 from p2s import inventory, profiles  # noqa: E402
-from parts import bench_dogs, dog_deck  # noqa: E402
+from parts import bench_dogs, dog_deck, dog_rig  # noqa: E402
 from parts.bench_dogs import BUILDERS  # noqa: E402
 from tools.render import INK, iso, mesh, plate  # noqa: E402
 
@@ -267,8 +267,12 @@ def preview(params: bench_dogs.Params, deck: dog_deck.Params, part: Part,
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--part", default="stop",
-                    choices=[*BUILDERS, "deck", "ladder"],
-                    help="what to build")
+                    choices=[*BUILDERS, "deck", "ladder", "template", "arm",
+                             "strip", "pucks"],
+                    help="what to build. Beyond the set itself: 'ladder' and "
+                         "'pucks' are fit tests, 'arm' and 'strip' are the rig "
+                         "(see parts.dog_rig), and 'template' pilots a wooden "
+                         "deck instead of printing one")
     ap.add_argument("--set", action="store_true",
                     help="a starter plate instead of one part")
     ap.add_argument("--grid", default="half-inch",
@@ -279,6 +283,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="pitches between the fence's shanks")
     ap.add_argument("--cols", type=int, default=dog_deck.Params.cols)
     ap.add_argument("--rows", type=int, default=dog_deck.Params.rows)
+    ap.add_argument("--root", type=float, default=bench_dogs.Params.root,
+                    help="shank root fillet; --root 0.05 is the square-rooted "
+                         "arm to break against a filleted one")
     ap.add_argument("--copies", type=int, default=1)
     ap.add_argument("--material", default="ASA",
                     help="what to slice it for; not PLA, which is soft by 55C")
@@ -290,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
 
     grid = dog_grid.named(args.grid)
     params = bench_dogs.Params(
-        grid=grid, fit=dog_grid.fit(args.fit), fence_span=args.span
+        grid=grid, fit=dog_grid.fit(args.fit), fence_span=args.span, root=args.root
     )
     deck = dog_deck.Params(grid=grid, cols=args.cols, rows=args.rows)
 
@@ -300,6 +307,14 @@ def main(argv: list[str] | None = None) -> int:
         label, built = "fit ladder", bench_dogs.ladder(params) * args.copies
     elif args.part == "deck":
         label, built = "deck", [dog_deck.build(deck)] * args.copies
+    elif args.part == "template":
+        label, built = "wooden deck template", [dog_deck.template(deck)] * args.copies
+    elif args.part == "strip":
+        label, built = "warp strip", [dog_rig.strip(deck)] * args.copies
+    elif args.part == "arm":
+        label, built = "break arm", [dog_rig.arm(params)] * args.copies
+    elif args.part == "pucks":
+        label, built = "puck ladder", dog_rig.puck_ladder(params) * args.copies
     else:
         label, built = args.part, [BUILDERS[args.part](params)] * args.copies
 
@@ -329,6 +344,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.part == "ladder" and not args.set:
         print("fits, loosest first: " + ", ".join(
             f"{n} {dog_grid.FITS[n]:.2f}mm" for n in dog_grid.LADDER))
+    if args.part == "pucks" and not args.set:
+        print("grips, loosest first: " + ", ".join(
+            f"{g:.2f}mm" for g in dog_rig.PUCK_GRIPS))
+    if args.part == "arm" and not args.set:
+        import math
+
+        z = math.pi * params.shank**3 / 32
+        lo, hi = (z * mpa / 1000 / (dog_rig.ARM / 1000) / 9.81 for mpa in (20, 35))
+        print(f"expect the root to go somewhere between {lo:.1f} and {hi:.1f} kg "
+              f"on the {dog_rig.ARM:.0f}mm arm; the clamp applies "
+              f"{200 * params.screw_height / 1000:.1f} N.m at a mild 200 N")
     bb = part.bounding_box()
     print(f"{label}: {len(built)} part{'s' if len(built) > 1 else ''}, "
           f"valid={part.is_valid}, {bb.size.X:.1f} × {bb.size.Y:.1f} × "

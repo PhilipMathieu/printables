@@ -7,14 +7,24 @@ point -- and every awkward thing about fixturing on it comes from trying to say
 along a diagonal". The deck exists to change the coordinate system. Bolt it down
 once and the slots are never touched again.
 
-WHY IT IS PRINTED AND NOT CUT FROM PLYWOOD. The accuracy of the whole set lives
-in this one part. A stop's position is known because the hole it sits in is
-known, and a hole bored by hand in ply is a millimetre from where you meant it.
-Printed, the grid is exact and free, and the parts that plug into it were cut
-from the same numbers. Ply is the better material in every other respect --
-stiffer, cheaper, and it does not mind being drilled into -- so if this gets
-made in wood one day, bore it through a printed copy of this plate rather than
-off a rule.
+PRINTED OR WOODEN, AND THE ARGUMENT IS CLOSER THAN IT LOOKS. The accuracy of the
+whole set lives in this one part: a stop's position is known because the hole it
+sits in is known, and a hole laid out by hand in ply is a millimetre from where
+you meant it. Printed, the grid is exact and free.
+
+But wood is the better material in every other respect. It is stiffer, it does
+not creep under a clamp left tight for a week, it does not care about being
+drilled into, it costs nothing, and it will not warp on the plate -- which is
+the real risk in a printed plate this size, and the one thing about this design
+that a print either survives or does not. MDF over ply, for hole quality and
+because it moves less with the weather.
+
+So the accuracy argument is not really an argument for plastic; it is an
+argument against *marking out by hand*. ``template`` settles it: a printed
+lattice that pilots every station off the same numbers this plate is built
+from, so a wooden deck bored through it has the grid exactly and the material
+advantages as well. Print the plate to get going, and cut the wooden one when
+the numbers have stopped moving.
 
 IT DOES NOT COST YOU ANY DEPTH. 10mm under the work sounds like 10mm off a
 70mm stroke, but the drill carriage clamps at whatever height you set on the
@@ -40,7 +50,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from build123d import Part, Plane, Polyline, Pos, RectangleRounded, extrude, make_face, revolve, Axis
+from build123d import (
+    Align,
+    Axis,
+    Box,
+    Cylinder,
+    Part,
+    Plane,
+    Polyline,
+    Pos,
+    RectangleRounded,
+    extrude,
+    make_face,
+    revolve,
+)
 
 from geom import dog_grid
 from geom.dog_grid import Grid
@@ -126,7 +149,7 @@ class Params:
             raise ValueError("the corner radius leaves no straight edge")
 
 
-def _hole(params: Params) -> Part:
+def hole(params: Params) -> Part:
     """One hole cutter: a bore with a chamfered mouth, long at both ends.
 
     Run past the plate top and bottom so the boolean has no coincident faces to
@@ -157,11 +180,51 @@ def build(params: Params) -> Part:
     )
     # Summed into one cutter and subtracted once. Thirty-five sequential
     # booleans against a plate this size takes minutes; this takes seconds.
-    cutter = _hole(params)
+    cutter = hole(params)
     holes = Part()
     for x, y in params.stations:
         holes += Pos(x, y, 0) * cutter
     return plate - holes
+
+
+def template(
+    params: Params, thickness: float = 2.5, rib: float = 14.0, pilot: float = 3.2
+) -> Part:
+    """A drilling template: the grid as pilot holes, for boring a wooden deck.
+
+    Clamp it to the board, run a 3mm bit through every hole, take it off, and
+    bore the half inch holes on the drill press with a brad point or a Forstner
+    dropped into each pilot. The grid then comes off the same arithmetic as the
+    printed plate rather than off a rule and a square, which is the only reason
+    the printed plate was preferred in the first place.
+
+    A lattice rather than a sheet, because a solid template of this footprint is
+    half the material of the deck it exists to avoid printing. Ribs down every
+    row and column carry a pilot at each crossing and nothing anywhere else.
+
+    Bore the pilots with a hand drill, not on the stand: the board is wider than
+    this machine's throat, so the far row cannot be reached without turning the
+    board around, and pilots are the step where that would cost you the grid.
+
+    It aligns off its own outer ribs, whose centres sit ``margin`` in from where
+    the deck's edges would be -- so cut the board to ``width`` x ``depth``, set
+    the template back that far on every side, and clamp.
+    """
+    params.validate()
+    across, along = params.grid.span(params.cols), params.grid.span(params.rows)
+    lattice = Part()
+    for _, y in {(0, y) for _, y in params.stations}:
+        lattice += Pos(0, y, 0) * Box(
+            across + rib, rib, thickness, align=(Align.CENTER, Align.CENTER, Align.MIN)
+        )
+    for x, _ in {(x, 0) for x, _ in params.stations}:
+        lattice += Pos(x, 0, 0) * Box(
+            rib, along + rib, thickness, align=(Align.CENTER, Align.CENTER, Align.MIN)
+        )
+    pilots = Part()
+    for x, y in params.stations:
+        pilots += Pos(x, y, thickness / 2) * Cylinder(pilot / 2, thickness * 3)
+    return lattice - pilots
 
 
 if __name__ == "__main__":
