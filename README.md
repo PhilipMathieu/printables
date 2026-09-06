@@ -168,6 +168,15 @@ Print the strip first for a reason beyond warp: nothing else can be tested
 without a hole to test it in, and the deck is six hours away. Measure it for
 flatness the moment it is off the plate, before it becomes a fixture.
 
+Print the batch on one plate, and then print the set itself with the *same*
+profile — walls especially. Every strength figure above is for a solid root, and
+a shank is only 11.65mm across, so the shell is most of it: four walls leave a
+core that is mostly air and take about a quarter off the section modulus, which
+turns 3.1–5.4 N·m into 2.3–4.1 and puts a firm hand on the knob clear of both
+ends. Six walls gets the root back to 90% of solid. Use six, 40% infill, and do
+not change either between the arm and the parts the arm is a proxy for, or the
+weight it broke at is a number about a different object.
+
 **The arm is the one to print first**, and the reason is a correction rather than
 a preference. An 11.65mm shank has a section modulus of 155mm³, so between 20
 and 35 MPa of layer adhesion it lets go somewhere between 3.1 and 5.4 N·m. The
