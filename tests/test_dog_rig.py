@@ -154,6 +154,52 @@ def test_the_knob_forces_are_the_preload_formula_and_not_a_guess(params):
         assert torque / (0.2 * 0.006) == pytest.approx(expect, rel=0.01)
 
 
+WALL = 0.42
+"""Wall extrusion width for a 0.4mm nozzle, in mm. Every conclusion below is a
+ratio, so being a few hundredths out changes none of them."""
+
+
+def _shelled_z(diameter, walls, width=WALL):
+    """Section modulus of a shank whose core is sparse infill, in mm^3.
+
+    Counting the shell only, which is the conservative reading and close to the
+    true one: sparse infill in a small core is neither continuous nor well bonded
+    across layers, which is the axis this root fails on.
+    """
+    core = max(diameter - 2 * walls * width, 0.0)
+    return math.pi * (diameter**4 - core**4) / (32 * diameter)
+
+
+def test_four_walls_take_a_quarter_off_the_root(params):
+    """The figure quoted everywhere -- 3.1 to 5.4 N.m -- is for a solid root, and
+    a shank is only 11.65mm across, so the shell is most of it. At four walls the
+    range is really 2.3 to 4.1, which a firm hand on the knob clears at both
+    ends. This is the setting the break number is most sensitive to."""
+    solid = math.pi * params.shank**3 / 32
+    assert _shelled_z(params.shank, 4) / solid == pytest.approx(0.74, abs=0.02)
+
+
+def test_eight_walls_make_the_shank_effectively_solid(params):
+    """And it costs nothing worth counting on parts this size, which is why the
+    set is printed at eight rather than at a number chosen for print time."""
+    solid = math.pi * params.shank**3 / 32
+    assert _shelled_z(params.shank, 8) / solid > 0.95
+
+
+def test_the_infill_pattern_is_not_what_decides_the_root(params):
+    """Asked directly, and worth an assertion because the intuition is wrong. At
+    eight walls the core is inside a third of the diameter, which is close to the
+    neutral axis, so the whole of it -- pattern, density, all of it -- is worth a
+    few percent of the root. Wall count is worth twenty-three points over the
+    same span. Choose the pattern for the deck's warp instead; it is the part
+    that has a stake in it."""
+    solid = math.pi * params.shank**3 / 32
+    core_share = (solid - _shelled_z(params.shank, 8)) / solid
+    wall_share = (_shelled_z(params.shank, 8) - _shelled_z(params.shank, 4)) / solid
+    assert core_share < 0.05
+    assert wall_share > 4 * core_share
+
+
 def test_a_smaller_screw_would_make_the_load_worse_not_better(params):
     """The instinct that a smaller fastener bounds what a hand can do, which is
     backwards: preload goes as 1/d at a given torque, so the same knob on an M5

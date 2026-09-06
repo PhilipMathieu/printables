@@ -168,14 +168,34 @@ Print the strip first for a reason beyond warp: nothing else can be tested
 without a hole to test it in, and the deck is six hours away. Measure it for
 flatness the moment it is off the plate, before it becomes a fixture.
 
-Print the batch on one plate, and then print the set itself with the *same*
-profile — walls especially. Every strength figure above is for a solid root, and
-a shank is only 11.65mm across, so the shell is most of it: four walls leave a
-core that is mostly air and take about a quarter off the section modulus, which
-turns 3.1–5.4 N·m into 2.3–4.1 and puts a firm hand on the knob clear of both
-ends. Six walls gets the root back to 90% of solid. Use six, 40% infill, and do
-not change either between the arm and the parts the arm is a proxy for, or the
-weight it broke at is a number about a different object.
+Print the batch on one plate. Two settings decide whether any of it transfers.
+
+**Walls, on anything with a shank.** Every strength figure above is for a solid
+root, and a shank is only 11.65mm across, so the shell is most of it:
+
+| walls | core left | root, vs solid |
+|---|---|---|
+| 4 | 8.3mm | 74% — turns 3.1–5.4 N·m into 2.3–4.1 |
+| 6 | 6.6mm | 90% |
+| **8** | 4.9mm | **97% — effectively solid** |
+
+Use **8**. On parts this size it costs minutes, and it is the one setting the
+break number is really sensitive to.
+
+**Infill pattern matters, but not there.** At eight walls the core is inside a
+third of the diameter, close to the neutral axis, so the entire core — pattern,
+density, all of it — is worth a few percent of the root, against twenty-three
+points for wall count over the same span. So choose the pattern for the part
+that does have a stake in it: the deck is 182mm of flat plate and warp is its
+real risk, which argues for **gyroid**, at **40%**. It builds up less directional
+stress than grid or rectilinear, has no crossings to over-extrude at, and is
+isotropic, which the clamp body wants around its nut trap as well.
+
+The rule underneath both: the arm is a proxy for the dogs and the strip is a
+proxy for the deck, so **arm and dogs must match, and strip and deck must match**.
+Change a setting between a proxy and the thing it stands for and the number it
+gave you is about a different object. The two pairs need not match each other —
+a plate loaded in compression does not need eight walls.
 
 **The arm is the one to print first**, and the reason is a correction rather than
 a preference. An 11.65mm shank has a section modulus of 155mm³, so between 20
