@@ -28,7 +28,7 @@ stops, a fence, a screw clamp, a floating pad and sacrificial backers, all
 plugging into the same grid.
 
 ```sh
-python -m tools.bench_dogs --part ladder      # print this first
+python -m tools.bench_dogs --part strip       # print this first
 python -m tools.bench_dogs --part deck
 python -m tools.bench_dogs --set
 ```
@@ -157,20 +157,32 @@ get going and cut the wooden one when the numbers have stopped moving.
 Everything settleable by arithmetic is settled and checked on every build. Four
 things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
 
-| | print | what it tells you |
+| order | print | what it tells you |
 |---|---|---|
-| `--part ladder` | 20 min | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object |
-| `--part arm` | 20 min | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight |
-| `--part strip` | 35 min | whether a plate this long comes off the bed flat, before committing six hours to finding out |
-| `--part pucks` | 10 min | which backer interference seats flush and still grips |
+| 1 | `--part strip` | whether a plate this long comes off the bed flat, before committing six hours to finding out — and then it *is* the test fixture, since it carries a real row of holes at full deck thickness for everything below |
+| 2 | `--part ladder` | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object |
+| 3 | `--part pucks` | which backer interference seats flush and still grips |
+| 4 | `--part arm` ×2 | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight. Print the second with `--root 0.01`, or the fillet stays a claim |
 
-The arm is the one worth doing, and the metric grid made it matter more. An
-11.65mm shank has a section modulus of 155mm³, so somewhere between 20 and 35
-MPa of layer adhesion it lets go between 3.1 and 5.4 N·m — against 2.1 N·m from
-the clamp at a mild 200N on the screw. That is a factor of one and a half, and
-an M6 wound up with a tool reaches ten times it.
-Watch where the arm breaks: at the root means the fillet is the limit, up the
-shank means it moved the weak point somewhere the design does not care about.
+Print the strip first for a reason beyond warp: nothing else can be tested
+without a hole to test it in, and the deck is six hours away. Measure it for
+flatness the moment it is off the plate, before it becomes a fixture.
+
+**The arm is the one to print first**, and the reason is a correction rather than
+a preference. An 11.65mm shank has a section modulus of 155mm³, so between 20
+and 35 MPa of layer adhesion it lets go somewhere between 3.1 and 5.4 N·m. The
+force on the other side of that was quoted here as "a mild 200N", which was a
+guess dressed as a number. Preload is `F = T/(K·d)`, so an M6 under a hand on a
+knob is 250N turned lightly and **500N turned firmly** — and 500N at the bolt's
+height above the deck is 5.2 N·m. That is not a factor of one and a half below
+the root's strength; it is inside the range the root fails in. A light hand is
+comfortable, a firm one is unknown, and the arm is how the unknown gets closed.
+Watch where it breaks: at the root means the fillet is the limit, up the shank
+means it moved the weak point somewhere the design does not care about.
+
+Going to a smaller screw does not help, which is worth knowing before trying it:
+force goes as 1/d for a given torque, so the same knob on an M5 delivers 600N,
+not less. What bounds the force is the knob's diameter and the hand on it.
 
 Print it in **PLA**, which reverses what this said first. The deck is 182mm of
 flat plate — exactly what ASA warps and PLA does not — and it is the longest

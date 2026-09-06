@@ -8,12 +8,16 @@ destroyed.
 
 WHAT IS ACTUALLY UNKNOWN, in the order it would hurt:
 
-1. How much a shank root holds. The fillet is a guess, and the numbers say the
-   margin is thinner than it feels: a 12.35mm shank has a section modulus of
-   185mm^3, so at somewhere between 20 and 35 MPa of layer adhesion it lets go
-   between 3.7 and 6.5 N.m -- against 2.1 N.m from the clamp at a modest 200N
-   of screw force. Two-ish times, and an M6 wound up with a tool reaches ten
-   times that. ``arm`` turns the question into a weight you can hang.
+1. How much a shank root holds. The fillet is a guess, and the numbers no longer
+   say the margin is thin -- they say there may not be one. An 11.65mm shank has
+   a section modulus of 155mm^3, so at somewhere between 20 and 35 MPa of layer
+   adhesion it lets go between 3.1 and 5.4 N.m. Against that, the clamp at a
+   firm hand on its knob (``bench_dogs.KNOB``, 500N, corrected upwards from a
+   guessed 200) puts 5.2 N.m into the root. That is inside the range the root
+   fails in, not below it. A light hand at 250N gives 2.6 and is comfortable, so
+   the honest statement is that the clamp is usable and its upper half is
+   unknown. ``arm`` turns the question into a weight you can hang, and it is now
+   the first thing to print rather than the interesting one.
 
 2. Whether a printed plate this long comes off the bed flat. ``strip`` is the
    cheap proxy, with the caveat in its own docstring.

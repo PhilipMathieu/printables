@@ -116,14 +116,51 @@ def test_the_expected_break_is_a_weight_a_person_can_hang(params):
         assert kg == pytest.approx(expect, abs=0.1)
 
 
-def test_the_clamp_can_load_a_shank_to_within_a_factor_of_a_few(params):
-    """Which is why this is worth breaking one to find out, rather than
-    asserting it is fine. At 200N -- a mild hand on a knob -- the clamp is
-    already inside a factor of three of the weakest plausible root."""
-    shank_z = math.pi * params.shank**3 / 32
-    weakest = shank_z * 20 / 1000  # N.m at 20 MPa of layer adhesion
-    applied = 200 * params.screw_height / 1000
-    assert 1 < weakest / applied < 3
+def _moment(params, force):
+    """N.m at a shank root from a screw force, the bolt being that far up."""
+    return force * params.screw_height / 1000
+
+
+def _root_holds(params, mpa):
+    """N.m a shank root holds at a given layer adhesion."""
+    return math.pi * params.shank**3 / 32 * mpa / 1000
+
+
+def test_a_light_hand_on_the_knob_is_inside_the_weakest_plausible_root(params):
+    """The half of the range that is fine, and it is the half the clamp is
+    actually used in: 250N is a knob turned to snug, and the root holds it even
+    if the layers came out as badly as they plausibly can."""
+    light, _ = bench_dogs.KNOB
+    assert _moment(params, light) < _root_holds(params, 20)
+
+
+def test_a_firm_hand_on_the_knob_is_not(params):
+    """The correction that made the arm the first thing to print. This was
+    written as "200N, a factor of one and a half clear", from a guessed force.
+    The preload an M6 actually delivers under a firm hand is 500N, and that
+    lands between the two ends of the root's plausible strength -- so whether
+    the clamp can break its own shank is not something the arithmetic answers,
+    which is the whole argument for breaking one."""
+    _, firm = bench_dogs.KNOB
+    assert _root_holds(params, 20) < _moment(params, firm) < _root_holds(params, 35)
+
+
+def test_the_knob_forces_are_the_preload_formula_and_not_a_guess(params):
+    """F = T / (K d), nut factor 0.2, on an M6 -- a knob turned lightly at
+    0.3 N.m and firmly at 0.6. Asserted because the number they replaced was a
+    guess, and a guess is what this is here to stop happening twice."""
+    light, firm = bench_dogs.KNOB
+    for torque, expect in ((0.3, light), (0.6, firm)):
+        assert torque / (0.2 * 0.006) == pytest.approx(expect, rel=0.01)
+
+
+def test_a_smaller_screw_would_make_the_load_worse_not_better(params):
+    """The instinct that a smaller fastener bounds what a hand can do, which is
+    backwards: preload goes as 1/d at a given torque, so the same knob on an M5
+    delivers more force than on an M6. What bounds it is the knob."""
+    _, firm = bench_dogs.KNOB
+    on_m5 = 0.6 / (0.2 * 0.005)
+    assert on_m5 > firm
 
 
 # --- the warp strip --------------------------------------------------------

@@ -24,6 +24,11 @@ degree cone, which is a fillet in the only direction that still prints. And the
 bolt wants a knob or a wing head rather than a hex or a socket, so the torque a
 hand can apply is the limit rather than the plastic being it.
 
+That second one is not a nicety, which is what the corrected numbers in ``KNOB``
+changed. A firm hand on a knob is 500N, and 500N at the bolt's height is 5.2 N.m
+against a root that holds 3.1 to 5.4. The knob is not buying margin on top of a
+comfortable design; it is most of the margin there is.
+
 WHAT THE FOUR MOUNTING BOLTS ACTUALLY SEE, which is almost nothing. A fence and
 a clamp holding one workpiece push against each other, and both reactions land
 in the same plate: the loop closes inside the deck and never reaches the
@@ -95,6 +100,26 @@ from build123d import (
 
 from geom import dog_grid
 from geom.dog_grid import Grid
+
+KNOB = (250.0, 500.0)
+"""Axial force an M6 in the clamp delivers under a hand on a knob, in newtons.
+
+Preload is ``F = T / (K d)`` with a nut factor of about 0.2 for dry steel, so a
+knob turned lightly at 0.3 N.m gives 250N and one turned firmly at 0.6 gives
+500. This corrected an earlier figure of 200N, which was a guess dressed as a
+number and was optimistic by somewhere between a quarter and a factor of two
+and a half. It matters because 500N times the bolt's height above the deck is
+5.2 N.m at a shank root that holds 3.1 to 5.4, so a firm hand is not inside the
+margin -- it is on it. See ``parts.dog_rig``.
+
+A SMALLER SCREW MAKES THIS WORSE, WHICH IS THE OPPOSITE OF THE FIRST INSTINCT.
+Dropping to M5 to bound what a hand can do looks right and is backwards: the
+force goes as 1/d for a given torque, so the same knob on an M5 delivers 600N
+rather than 500. Nothing about the fastener limits this -- an M5 in 8.8 has
+about 9kN of proof load, twenty times what is in question. The limit is the
+knob's diameter and the hand on it, and if this needs bounding it is bounded
+there, by making the knob small enough that a firm grip is not a big torque.
+"""
 
 NUT_COVER = 2.0
 """Millimetres of material required between the peak of the nut trap's gable and
