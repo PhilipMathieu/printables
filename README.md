@@ -22,7 +22,7 @@ funnel never once widens on the way down.
 Workholding for a Craftsman 335.25921 — which is not a drill press but a *stand*
 that a portable drill clamps into, with a cast base whose only fixturing is four
 T-bolt slots in an X. As a coordinate system that is close to useless, so the
-first part is a deck that replaces it: a plate of 12mm holes on a 24mm pitch
+first part is a deck that replaces it: a plate of 12mm holes on a 25mm pitch
 that bolts down through those slots once and is never taken off. Then
 stops, a fence, a screw clamp, a floating pad and sacrificial backers, all
 plugging into the same grid.
@@ -55,7 +55,7 @@ holding one workpiece push against each other and both reactions land in the
 same plate, so the loop closes inside the deck. The four 5/16-18s into the
 casting hold the deck flat and locate it, and that is all they ever do.
 
-#### Why 12 on 24
+#### Why 12 on 25
 
 The grid began as half-inch holes on an inch, reasoning that the machine is
 imperial and a ½" Forstner is in every hardware shop in the country. Both halves
@@ -65,16 +65,32 @@ doesn't touch that. And no bit is needed to make the printed deck at all; a
 wooden one is piloted at 3mm through a printed template and opened out, so bit
 size appears in exactly one place, where 12mm is as ordinary as ½".
 
-What actually decided it was neither. At 24mm the seven columns span 144, which
-puts every station inside the 152mm square of flat casting they bolt to; at 25.4
-the outermost column landed on its edge to within two tenths of a millimetre.
-The pitch being exactly twice the hole is a bonus: the web between two stations
-is then as wide as a station, so the plate is no weaker between its holes than
-at them.
+**25 because that is the standard, and there is only one at this size.** Festool's
+MFT is the de facto metric dog grid — 20mm holes on 96mm — and it is timber
+scale: a 96mm pitch puts one station under a pedal enclosure. The other metric
+fixturing standard is the optical breadboard, M6 on 25mm centres, and that one
+*is* this scale; a Thorlabs MB1515/M is 150 × 150mm of aluminium on exactly this
+grid, which is within 2mm of this casting's flat field. So the printed deck is
+what you use while the numbers are still moving, and a tapped or bought plate is
+what it becomes — and the fixtures carry over, because a fence spans a whole
+number of pitches and a clamp straddles exactly one. What would change is the
+shank, dog to M6 stud: one feature per part, not a redesign.
 
-The cost is real. A 12mm hole takes an 11.65mm shank where a half-inch one took
-12.35 — a sixth off the section modulus at the root, which is the one place the
-margin was already thin.
+**12 because 10 breaks in the hand.** A dog is a cantilever on a circular root,
+so what it survives goes as the cube of the diameter. A 9.65mm shank has a
+section modulus of 88mm³ against 155 for an 11.65mm one, and across printed
+layers at 20–35 MPa that is a root letting go somewhere between 176 and 309 N
+applied 10mm up — while an M6 turned by hand on a knob delivers 250–500. Ten
+would break under a firm hand rather than under abuse. Twelve is the smallest
+hole with the load on the right side of the line, and the margin there is
+thinner than it sounds, which is what the break arm is for.
+
+The cost is real and it is at the edge of the plate. Seven columns on 25mm span
+150 against a 152mm field, so the outermost column sits 1mm inside it, where at
+24mm it had 4. Its holes still bear more than half on casting and the rest is
+5mm of overhang on a 10mm plate, but it is the column to leave empty when a
+setup lets you. The older cost stands too: a 12mm hole takes an 11.65mm shank
+where a half-inch one took 12.35 — a sixth off the section modulus at the root.
 
 The stops are round, which sounds like laziness and is the point: a round dog
 touches an edge exactly `head/2` from its hole's centre whichever way it was
@@ -86,7 +102,7 @@ rather than two things at slightly different depths.
 
 The clamp is a screw and not a cam or a wedge because the gap between a
 workpiece and the nearest hole is anything up to a full pitch. An eccentric with
-25mm of throw would not be self-locking and a folding wedge pair would be 28mm
+that much throw would not be self-locking and a folding wedge pair would be 28mm
 thick at the fat end; an M6 × 60 costs pennies and puts the plastic back into
 compression. The window of gaps it can close — 4 to 34mm, the pad shifting both
 ends out rather than shortening it — has to be wider than the pitch, and that is
@@ -124,7 +140,7 @@ clearance hole underneath.
 Wood is the better material for the deck in every respect but one. It is
 stiffer, it does not creep under a clamp left tight for a week, it does not mind
 being drilled into, it costs nothing, and it cannot warp on a build plate —
-which is the real risk in a printed plate 176mm long, and the one thing about
+which is the real risk in a printed plate 182mm long, and the one thing about
 this design that a print either survives or does not. MDF over ply, for hole
 quality and because it moves less with the weather.
 
@@ -156,7 +172,7 @@ an M6 wound up with a tool reaches ten times it.
 Watch where the arm breaks: at the root means the fillet is the limit, up the
 shank means it moved the weak point somewhere the design does not care about.
 
-Print it in **PLA**, which reverses what this said first. The deck is 176mm of
+Print it in **PLA**, which reverses what this said first. The deck is 182mm of
 flat plate — exactly what ASA warps and PLA does not — and it is the longest
 print in the set, so the material that removes that risk beats the one that
 turns it into something to measure. The failure mode that is actually marginal

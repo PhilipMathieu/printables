@@ -89,9 +89,10 @@ class Params:
     cols: int = 7
     rows: int = 5
     """Stations across and along. Both odd, so one lands on the spindle axis --
-    see the module note. 7 x 5 on a one inch pitch spans 152 x 102mm, which
-    covers the casting's field and leaves a row of stations hanging off each end
-    for work that is longer than the machine."""
+    see the module note. 7 x 5 on a 25mm pitch spans 150 x 100mm, which covers
+    the casting's 152mm field to within a millimetre at the outermost column and
+    leaves a row of stations hanging off each end for work that is longer than
+    the machine."""
 
     margin: float = 16.0
     """Plate beyond the outermost hole centres.
@@ -101,7 +102,7 @@ class Params:
     first thing a stop breaks out of. And it has to be at least half the clamp's
     depth, or a clamp in the outermost row hangs its back end off the plate --
     which is where a clamp holding the deepest workpiece the deck can take
-    necessarily goes. 16mm clears both: the web is 12.7 and the clamp is 30 deep.
+    necessarily goes. 16mm clears both: the web is 13 and the clamp is 30 deep.
     """
     thickness: float = 0.0
     """Plate thickness. Zero means take the grid's own deck figure, which is

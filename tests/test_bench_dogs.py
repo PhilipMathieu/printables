@@ -118,6 +118,34 @@ def test_the_grid_is_centred_on_the_origin():
     assert min(xs) == pytest.approx(-max(xs))
 
 
+def test_the_default_grid_is_the_metric_breadboard_pitch():
+    """25mm is not a rounder 24. It is the pitch of every metric optical
+    breadboard and small fixture plate -- a Thorlabs MB1515/M and its
+    equivalents -- which is the whole reason for choosing it over anything else
+    in the same neighbourhood, and the reason a fixture cut for this set is
+    already cut for one of those plates."""
+    assert dog_grid.DEFAULT.pitch == 25.0
+    board = 150.0
+    assert dog_grid.DEFAULT.span(7) == pytest.approx(board)
+
+
+def test_a_short_m6_insert_fits_a_station_and_a_long_one_does_not():
+    """What the M6 option costs if it is ever taken in a dog hole rather than in
+    a plate: the insert has to be short enough to finish below the deck's face,
+    because an insert standing proud is something the work rocks on."""
+    grid = dog_grid.DEFAULT
+    assert grid.takes_insert(*dog_grid.M6_INSERT)
+    od, _ = dog_grid.M6_INSERT
+    assert not grid.takes_insert(od, 12.7), "a long M6 insert stands proud"
+
+
+def test_a_ten_millimetre_grid_would_not_carry_an_m6_insert_at_all():
+    """A second argument against the smaller hole that has nothing to do with
+    the shank: 8mm of insert plus a wall each side does not go in it."""
+    small = dog_grid.Grid("ten", hole=10.0, pitch=25.0, deck=10.0)
+    assert not small.takes_insert(*dog_grid.M6_INSERT)
+
+
 def test_an_unknown_grid_or_fit_says_what_there_is():
     with pytest.raises(KeyError, match="metric"):
         dog_grid.named("cubits")
