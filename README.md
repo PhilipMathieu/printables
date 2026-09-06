@@ -122,7 +122,7 @@ things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
 
 | | print | what it tells you |
 |---|---|---|
-| `--part ladder` | 20 min | shank clearance: keep the tightest that drops in under its own weight |
+| `--part ladder` | 20 min | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object |
 | `--part arm` | 20 min | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight |
 | `--part strip` | 35 min | whether a plate this long comes off the bed flat, before committing six hours to finding out |
 | `--part pucks` | 10 min | which backer interference seats flush and still grips |
@@ -134,7 +134,17 @@ That is a factor of two, and an M6 wound up with a tool reaches ten times it.
 Watch where the arm breaks: at the root means the fillet is the limit, up the
 shank means it moved the weak point somewhere the design does not care about.
 
-Print in ASA. The shank clearance is the one number here that cannot be reasoned
+Print it in **PLA**, which reverses what this said first. The deck is 184mm of
+flat plate — exactly what ASA warps and PLA does not — and it is the longest
+print in the set, so the material that removes that risk beats the one that
+turns it into something to measure. The failure mode that is actually marginal
+is a shank root in layer-line tension, which happens to be ASA's weak axis and
+PLA's strong one. What PLA is bad at is heat and sustained load, and neither
+bites here: work is clamped for minutes, not weeks. Two parts still want ASA
+once the numbers settle — the backers, which catch warm swarf off aluminium, and
+the clamp if you leave things clamped for days.
+
+The shank clearance is the one number here that cannot be reasoned
 out — it depends on the deck, and a printed deck and a wooden one are not the
 same hole — so `--part ladder` prints four stops at four fits and the tightest
 that still drops in under its own weight is the answer for everything else.

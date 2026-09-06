@@ -80,8 +80,14 @@ def puck_ladder(params: Params) -> list[Part]:
     Press each into a spare station and push on it. The one to keep is the
     loosest that still seats flush by thumb and does not move when a bit's
     thrust is imitated with a thumb, which is all the load a backer ever sees.
+
+    Each is marked with its grip in hundredths on the end that goes in first,
+    which is the end you can still read while deciding.
     """
-    return [bench_dogs.puck(replace(params, puck_grip=g)) for g in PUCK_GRIPS]
+    return [
+        bench_dogs.puck(replace(params, puck_grip=g, mark=f"{g * 100:.0f}"))
+        for g in PUCK_GRIPS
+    ]
 
 
 def strip(deck: dog_deck.Params, width: float = 30.0) -> Part:

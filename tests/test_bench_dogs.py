@@ -22,6 +22,8 @@ import pytest
 
 from geom import dog_grid
 from parts import dog_deck
+from dataclasses import replace
+
 from parts.bench_dogs import (
     BUILDERS,
     Params,
@@ -69,17 +71,29 @@ def facets(part, tol: float = 0.02):
     return tri, normal, area
 
 
-def overhangs(part, floor_tol: float = 1e-3, slack: float = 0.02):
+def overhangs(part, floor_tol: float = 1e-3, slack: float = 0.02,
+              bridged_at: float | None = None):
     """Facets that would print over air.
 
     Downward facing, leaning more than 45 degrees off vertical, and not lying on
     the build plate -- the plate-facing bottom of a part points straight down and
     is not an overhang, it is the first layer.
+
+    ``bridged_at`` exempts one named height: the flat ceiling of an engraved
+    mark, which is a bridge and not a roof. The distinction is span, not angle.
+    A letter stroke is well under a millimetre across and bridges over nothing;
+    a wide flat ceiling at the same angle would sag. Since a facet's angle
+    cannot tell those apart, the exemption is deliberately narrow -- one height,
+    named by the caller, and the caller is expected to check separately that
+    what it let through really is the engraving.
     """
     tri, normal, _ = facets(part)
     floor = tri[:, :, 2].min()
+    ceiling = np.zeros(len(tri), dtype=bool)
+    if bridged_at is not None:
+        ceiling = (np.abs(tri[:, :, 2] - bridged_at) < floor_tol).all(axis=1)
     on_plate = (np.abs(tri[:, :, 2] - floor) < floor_tol).all(axis=1)
-    return normal[(-normal[:, 2] > COS45 + slack) & ~on_plate]
+    return normal[(-normal[:, 2] > COS45 + slack) & ~on_plate & ~ceiling]
 
 
 # --- the grid --------------------------------------------------------------
@@ -441,6 +455,32 @@ def test_nothing_in_the_set_overhangs_past_45_degrees(params, name):
         f"{name} has {len(bad)} facets printing over air, the worst leaning "
         f"{worst:.1f} degrees off vertical"
     )
+
+
+def test_a_marked_stop_overhangs_nowhere_but_its_engraving(params):
+    """The mark is cut into the face on the plate, so its ceiling is flat and
+    downward -- a bridge a letter-stroke wide, which prints, and the only thing
+    in the set the 45 degree rule cannot judge for itself. Everything else on a
+    marked stop has to stay clean."""
+    marked = stop(replace(params, mark="TIGHT"))
+    assert len(overhangs(marked, bridged_at=params.mark_depth)) == 0
+    # And the exemption is not hiding anything: without it, every facet it lets
+    # through is horizontal and at exactly the mark's depth.
+    tri, normal, _ = facets(marked)
+    loose = (-normal[:, 2] > COS45 + 0.02) & (tri[:, :, 2].min(axis=1) > 1e-3)
+    assert loose.any()
+    assert np.allclose(-normal[loose, 2], 1.0, atol=1e-6)
+    assert np.allclose(tri[loose][:, :, 2], params.mark_depth, atol=1e-6)
+
+
+def test_an_engraving_takes_a_small_bite_out_of_the_face_it_is_cut_into(params):
+    """Which bounds how wide the bridge over it can be. Letters at this size are
+    strokes, not slabs: if the mark ever grew to a large fraction of the head it
+    would stop being a thing that bridges."""
+    plain, marked = stop(params), stop(replace(params, mark="TIGHT"))
+    bite = plain.volume - marked.volume
+    face = math.pi * (params.head / 2) ** 2 * params.mark_depth
+    assert 0 < bite < face / 4
 
 
 @pytest.mark.parametrize("name", sorted(BUILDERS))

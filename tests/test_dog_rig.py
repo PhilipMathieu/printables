@@ -182,7 +182,9 @@ def test_the_rig_prints_the_same_way_up_as_the_set(params, deck, template):
         ("template", template),
         ("puck", dog_rig.puck_ladder(params)[-1]),
     ):
-        bad = overhangs(part)
+        # The backer is the one marked part in the rig, so its engraving's
+        # ceiling is exempted by height -- see ``overhangs``.
+        bad = overhangs(part, bridged_at=params.mark_depth if name == "puck" else None)
         assert len(bad) == 0, f"{name} has {len(bad)} facets over air"
         assert part.is_valid, name
         assert len(part.solids()) == 1, name

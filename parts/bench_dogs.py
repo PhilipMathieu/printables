@@ -58,8 +58,18 @@ self-locking, and a folding wedge pair that threw that far would be 28mm thick
 at the fat end. An M6 x 60 bolt covers it, costs pennies, and puts the plastic
 back into compression where it belongs.
 
-Print in ASA, or PETG. Not PLA: this sits on a machine, gets left clamped, and
-takes warm swarf off an aluminium enclosure, and PLA is soft by 55 degrees.
+WHICH PLASTIC, AND IT IS PLA -- which reverses what this said first. Two things
+decide it and both point the same way. The deck is 184mm of flat plate, which is
+precisely what ASA warps and PLA does not, and it is also the longest print
+here: the material that removes that risk is worth more than the one that makes
+it something to measure. And the failure mode that is actually marginal is a
+shank root in layer-line tension, which is ASA's weak axis and PLA's strong one.
+
+What PLA is bad at is heat and sustained load, and neither is load-bearing here
+-- work is clamped for minutes, not weeks. Two parts still want ASA once the
+numbers stop moving: the backers, which catch warm swarf off aluminium and will
+emboss where PLA goes soft around 55 degrees, and the clamp, if you are the sort
+who leaves things clamped for a week.
 """
 
 from __future__ import annotations
@@ -78,6 +88,7 @@ from build123d import (
     Pos,
     extrude,
     make_face,
+    mirror,
     revolve,
 )
 
@@ -133,6 +144,24 @@ class Params:
     against."""
     break_edge: float = 0.6
     """Chamfer on the exposed edges of a head."""
+
+    mark: str = ""
+    """A word cut into the face that lands on the build plate. Empty by default.
+
+    Only the ladders use it, and they need it: four stops that differ by 0.15mm
+    of shank are the same object to look at, so a fit test you cannot read after
+    the fact is a fit test you have to run again with calipers -- and not having
+    calipers is half of why the ladder exists.
+
+    It is engraved rather than raised because the face it goes on is the one
+    against the plate, and nothing can be raised off that. On a stop that face
+    is the head's top, so the mark is the side you look at with the dog in the
+    deck; on a backer it is the end that goes into the hole first, which is
+    exactly when you want to read it."""
+    mark_depth: float = 0.5
+    mark_font: str = "Helvetica"
+    """On the machine this is written for. Anywhere without it the toolkit
+    substitutes a sans face and says so, which for a shop label is fine."""
 
     # --- the fence --------------------------------------------------------
     fence_span: int = 4
@@ -377,11 +406,38 @@ class Params:
             )
         if self.puck_entry <= 0:
             raise ValueError("a puck has to start into the hole before it wedges")
+        if self.mark.strip():
+            if self.mark_depth <= 0:
+                raise ValueError("a mark with no depth is not a mark")
+            if self.mark_depth >= min(self.rise, g.deck) / 2:
+                raise ValueError(
+                    f"a {self.mark_depth}mm mark is more than half way through the "
+                    f"thinnest thing it is cut into"
+                )
         if self.puck_band >= g.deck:
             raise ValueError(
                 f"a {self.puck_band}mm taper over a {g.deck}mm puck is the whole "
                 f"puck, and a taper that shallow makes where it seats a lottery"
             )
+
+
+def _engrave(body: Part, params: Params, field: float) -> Part:
+    """Cut ``params.mark`` into whatever face of ``body`` is on the plate.
+
+    Mirrored, and that is not a detail. The engraved face is the one at z=0,
+    which is against the build plate, and every part here is turned over to be
+    used -- so a mark that reads the right way round in the model reads
+    backwards in the hand. Which horizontal axis it is turned about only sets
+    where the word ends up pointing, and on a round dog that is free.
+    """
+    if not params.mark.strip():
+        return body
+    from geom.motif import Text
+
+    word = Text(text=params.mark, font=params.mark_font).sketch(field)
+    return body - extrude(
+        Plane.XY * mirror(word, about=Plane.XZ), amount=params.mark_depth
+    )
 
 
 def _shank(params: Params) -> Part:
@@ -413,7 +469,7 @@ def stop(params: Params) -> Part:
     rh, rs = params.head / 2, params.shank / 2
     b, c, k = params.break_edge, params.lead, params.root
     top = params.rise + params.shank_length
-    return _revolved(
+    body = _revolved(
         [
             (0.0, 0.0),
             (rh - b, 0.0),
@@ -426,6 +482,7 @@ def stop(params: Params) -> Part:
             (0.0, top),
         ]
     )
+    return _engrave(body, params, params.head - 2 * params.break_edge)
 
 
 def puck(params: Params) -> Part:
@@ -453,9 +510,10 @@ def puck(params: Params) -> Part:
     rb = (params.grid.hole - params.puck_entry) / 2
     rt = (params.grid.hole + params.puck_grip) / 2
     b = params.break_edge
-    return _revolved(
+    body = _revolved(
         [(0.0, 0.0), (rb - b, 0.0), (rb, b), (rb, t - band), (rt, t), (0.0, t)]
     )
+    return _engrave(body, params, 2 * rb - 2 * b)
 
 
 def fence(params: Params) -> Part:
@@ -646,7 +704,9 @@ def ladder(params: Params) -> list[Part]:
     and a plywood one are not the same hole. Drop all four in and keep the
     tightest that still falls in under its own weight.
     """
-    return [stop(params.at(name)) for name in dog_grid.LADDER]
+    return [
+        stop(replace(params.at(name), mark=name.upper())) for name in dog_grid.LADDER
+    ]
 
 
 if __name__ == "__main__":

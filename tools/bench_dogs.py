@@ -287,8 +287,11 @@ def main(argv: list[str] | None = None) -> int:
                     help="shank root fillet; --root 0.05 is the square-rooted "
                          "arm to break against a filleted one")
     ap.add_argument("--copies", type=int, default=1)
-    ap.add_argument("--material", default="ASA",
-                    help="what to slice it for; not PLA, which is soft by 55C")
+    ap.add_argument("--material", default="PLA",
+                    help="what to slice it for. PLA: it does not warp on a plate "
+                         "this long and its layers are stronger, which are the two "
+                         "things that decide it here. ASA for the backers and the "
+                         "clamp later -- see parts.bench_dogs")
     ap.add_argument("--nozzle", type=float, default=profiles.DEFAULT_NOZZLE)
     ap.add_argument("-o", "--out", default=None,
                     help="output basename; .stl, .3mf and .png are written")
