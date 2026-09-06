@@ -119,8 +119,8 @@ def test_the_grid_is_centred_on_the_origin():
 
 
 def test_an_unknown_grid_or_fit_says_what_there_is():
-    with pytest.raises(KeyError, match="half-inch"):
-        dog_grid.named("metric")
+    with pytest.raises(KeyError, match="metric"):
+        dog_grid.named("cubits")
     with pytest.raises(KeyError, match="slip"):
         dog_grid.fit("interference")
 
@@ -536,9 +536,15 @@ def test_the_deck_can_clamp_anything_that_fits_on_it(params, deck):
     assert deepest == pytest.approx(
         back - params.reach + back - params.clamp_depth / 2 - params.pad_thickness
     )
-    assert deepest > 70
     near, far = params.reach_window
     assert far - near >= params.grid.pitch
+    # Against the actual work, rather than a round number. A 1590B is 60 deep
+    # and fits with room; a 1590BB is 94 and does not, which is the honest
+    # argument for seven rows rather than five and is asserted rather than
+    # asserted away.
+    assert deepest > 60
+    assert deepest < 94
+    assert capacity(params, 7) > 94
 
 
 def test_a_clamp_on_the_outermost_row_sits_on_the_plate(deck, params):

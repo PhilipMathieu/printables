@@ -22,8 +22,8 @@ funnel never once widens on the way down.
 Workholding for a Craftsman 335.25921 — which is not a drill press but a *stand*
 that a portable drill clamps into, with a cast base whose only fixturing is four
 T-bolt slots in an X. As a coordinate system that is close to useless, so the
-first part is a deck that replaces it: a plate of half-inch holes on a one inch
-pitch that bolts down through those slots once and is never taken off. Then
+first part is a deck that replaces it: a plate of 12mm holes on a 24mm pitch
+that bolts down through those slots once and is never taken off. Then
 stops, a fence, a screw clamp, a floating pad and sacrificial backers, all
 plugging into the same grid.
 
@@ -54,6 +54,27 @@ A nicer consequence of the load path than it first looks: a fence and a clamp
 holding one workpiece push against each other and both reactions land in the
 same plate, so the loop closes inside the deck. The four 5/16-18s into the
 casting hold the deck flat and locate it, and that is all they ever do.
+
+#### Why 12 on 24
+
+The grid began as half-inch holes on an inch, reasoning that the machine is
+imperial and a ½" Forstner is in every hardware shop in the country. Both halves
+were weaker than they sounded. The machine's coupling to imperial is one bolt
+size — its slots measure 8.6mm, a round number in neither system — and the grid
+doesn't touch that. And no bit is needed to make the printed deck at all; a
+wooden one is piloted at 3mm through a printed template and opened out, so bit
+size appears in exactly one place, where 12mm is as ordinary as ½".
+
+What actually decided it was neither. At 24mm the seven columns span 144, which
+puts every station inside the 152mm square of flat casting they bolt to; at 25.4
+the outermost column landed on its edge to within two tenths of a millimetre.
+The pitch being exactly twice the hole is a bonus: the web between two stations
+is then as wide as a station, so the plate is no weaker between its holes than
+at them.
+
+The cost is real. A 12mm hole takes an 11.65mm shank where a half-inch one took
+12.35 — a sixth off the section modulus at the root, which is the one place the
+margin was already thin.
 
 The stops are round, which sounds like laziness and is the point: a round dog
 touches an edge exactly `head/2` from its hole's centre whichever way it was
@@ -103,7 +124,7 @@ clearance hole underneath.
 Wood is the better material for the deck in every respect but one. It is
 stiffer, it does not creep under a clamp left tight for a week, it does not mind
 being drilled into, it costs nothing, and it cannot warp on a build plate —
-which is the real risk in a printed plate 184mm long, and the one thing about
+which is the real risk in a printed plate 176mm long, and the one thing about
 this design that a print either survives or does not. MDF over ply, for hole
 quality and because it moves less with the weather.
 
@@ -111,7 +132,7 @@ The one thing printing wins is accuracy, and on inspection that is not an
 argument for plastic at all — it is an argument against marking out by hand. So
 `--part template` is a printed lattice that pilots every station off the same
 numbers the plate is built from: clamp it to a board, run a 3mm bit through
-every hole, then bore the half-inch holes to the pilots. A fifth of the deck to
+every hole, then bore the 12mm holes to the pilots. A fifth of the deck to
 print, and the wooden deck comes out with the grid exactly. Print the plate to
 get going and cut the wooden one when the numbers have stopped moving.
 
@@ -127,14 +148,15 @@ things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
 | `--part strip` | 35 min | whether a plate this long comes off the bed flat, before committing six hours to finding out |
 | `--part pucks` | 10 min | which backer interference seats flush and still grips |
 
-The arm is the one worth doing. A 12.35mm shank has a section modulus of
-185mm³, so somewhere between 20 and 35 MPa of layer adhesion it lets go between
-3.7 and 6.5 N·m — against 2.1 N·m from the clamp at a mild 200N on the screw.
-That is a factor of two, and an M6 wound up with a tool reaches ten times it.
+The arm is the one worth doing, and the metric grid made it matter more. An
+11.65mm shank has a section modulus of 155mm³, so somewhere between 20 and 35
+MPa of layer adhesion it lets go between 3.1 and 5.4 N·m — against 2.1 N·m from
+the clamp at a mild 200N on the screw. That is a factor of one and a half, and
+an M6 wound up with a tool reaches ten times it.
 Watch where the arm breaks: at the root means the fillet is the limit, up the
 shank means it moved the weak point somewhere the design does not care about.
 
-Print it in **PLA**, which reverses what this said first. The deck is 184mm of
+Print it in **PLA**, which reverses what this said first. The deck is 176mm of
 flat plate — exactly what ASA warps and PLA does not — and it is the longest
 print in the set, so the material that removes that risk beats the one that
 turns it into something to measure. The failure mode that is actually marginal

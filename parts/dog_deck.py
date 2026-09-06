@@ -85,7 +85,7 @@ from geom.dog_grid import Grid
 class Params:
     """Everything the GUI would expose as a slider."""
 
-    grid: Grid = dog_grid.HALF_INCH
+    grid: Grid = dog_grid.DEFAULT
     cols: int = 7
     rows: int = 5
     """Stations across and along. Both odd, so one lands on the spindle axis --

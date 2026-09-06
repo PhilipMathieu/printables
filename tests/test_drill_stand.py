@@ -93,14 +93,18 @@ def test_even_a_square_deck_would_clear_the_column(deck):
 def test_every_station_is_over_casting_and_not_over_air(deck):
     """A stop bears on the deck and the deck bears on the casting, so a station
     hanging past the flat field is a station cantilevered on ten millimetres of
-    plastic. They all land inside it -- the outermost column by two tenths of a
-    millimetre, which is to say exactly on the edge, so heavy clamping belongs
-    on the columns inboard of it."""
+    plastic.
+
+    This is what the metric pitch bought. At 25.4 the outermost column landed on
+    the field's edge to within two tenths of a millimetre -- inside it, but only
+    just, and edge-loaded. At 24 the seven columns span 144 against a 152 field
+    and every station has millimetres of casting under it."""
     reach = STAND.field / 2
     for x, y in deck.stations:
-        assert abs(x) <= reach + 0.5, x
-        assert abs(y) <= reach + 0.5, y
-    assert max(abs(x) for x, _ in deck.stations) == pytest.approx(76.2)
+        assert abs(x) < reach, x
+        assert abs(y) < reach, y
+    clear = reach - max(abs(x) for x, _ in deck.stations)
+    assert clear > 3, f"outermost column only {clear:.1f}mm inside the field"
 
 
 def test_the_deck_covers_the_field_it_bolts_to(deck):

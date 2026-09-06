@@ -111,7 +111,7 @@ def test_the_expected_break_is_a_weight_a_person_can_hang(params):
     """The point of a 100mm arm: the whole plausible range of answers lands
     between a bottle of water and a bucket of it."""
     shank_z = math.pi * params.shank**3 / 32
-    for mpa, expect in ((20, 3.8), (35, 6.6)):
+    for mpa, expect in ((20, 3.2), (35, 5.5)):
         kg = shank_z * mpa / 1000 / (dog_rig.ARM / 1000) / 9.81
         assert kg == pytest.approx(expect, abs=0.1)
 

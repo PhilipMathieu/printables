@@ -275,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
                          "deck instead of printing one")
     ap.add_argument("--set", action="store_true",
                     help="a starter plate instead of one part")
-    ap.add_argument("--grid", default="half-inch",
+    ap.add_argument("--grid", default=dog_grid.DEFAULT.name,
                     help=f"hole pattern: {', '.join(dog_grid.CATALOGUE)}")
     ap.add_argument("--fit", default="slip",
                     help=f"shank clearance: {', '.join(dog_grid.FITS)}")

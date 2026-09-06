@@ -112,7 +112,7 @@ def _revolved(points: list[tuple[float, float]]) -> Part:
 class Params:
     """Everything the GUI would expose as a slider."""
 
-    grid: Grid = dog_grid.HALF_INCH
+    grid: Grid = dog_grid.DEFAULT
     """The hole pattern every part here plugs into."""
     fit: float = dog_grid.FITS["slip"]
     """Diametral clearance between a shank and its hole. Print the ladder before
