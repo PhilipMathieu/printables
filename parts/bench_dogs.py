@@ -27,7 +27,8 @@ hand can apply is the limit rather than the plastic being it.
 WHAT THE FOUR MOUNTING BOLTS ACTUALLY SEE, which is almost nothing. A fence and
 a clamp holding one workpiece push against each other, and both reactions land
 in the same plate: the loop closes inside the deck and never reaches the
-casting. The bolts hold the deck flat and locate it, and that is all they do.
+casting. The four 5/16-18s hold the deck flat and locate it, and that is all
+they do.
 
 The one steel part is the M6 in the clamp. Between its nut and its tip it is a
 strut in compression, not something that pulls -- which is why the nut needs

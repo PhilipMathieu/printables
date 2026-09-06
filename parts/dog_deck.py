@@ -39,11 +39,23 @@ them and no measurement of the casting is needed to get there. That hole then
 holds the sacrificial backer for every through-hole you drill, and lines up over
 the casting's own bit-clearance hole beneath.
 
-MOUNTING HOLES ARE DELIBERATELY NOT MODELLED. They depend on measurements of a
-particular casting rather than on anything in this repository, and marking them
-through the slots is both easier and more accurate than transferring them. Drill
-them 7mm for 1/4-20, and counterbore the top so a washer and nut sit below the
-surface -- a nut standing proud of the deck is a nut the work rocks on.
+MOUNTING HOLES ARE DELIBERATELY NOT MODELLED. They depend on where a particular
+casting's slots are rather than on anything in this repository, and marking them
+through the slots with the deck sitting on the casting is both easier than
+transferring a measurement and incapable of being off.
+
+The hardware comes out of ``geom.drill_stand``, and it is 5/16-18, not the
+1/4-20 this first said -- an 8.6mm slot with 13.4mm pockets takes a half-inch
+hex head through the pocket and will not let it back out through the slot, and
+there is 22.3mm of air under the casting for the head to live in. M8 also fits,
+with 0.4mm at the pocket against 5/16's 0.7.
+
+Drill 8.5mm through and counterbore the top 15mm wide and 6mm deep, so the nut
+finishes below the surface: a nut standing proud is a nut the work rocks on. Use
+a jam nut rather than a full one -- 4.4mm against 6.75 -- because the counterbore
+comes out of the ten millimetres the deck has, and four left under a full nut is
+less than is comfortable to tighten against. Snug, not cranked; that four
+millimetres is in punching shear around the hole. A 5/16-18 x 1in reaches.
 """
 
 from __future__ import annotations

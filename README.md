@@ -52,8 +52,8 @@ apply is the limit rather than the plastic being it.
 
 A nicer consequence of the load path than it first looks: a fence and a clamp
 holding one workpiece push against each other and both reactions land in the
-same plate, so the loop closes inside the deck. The four ¼-20s into the casting
-hold the deck flat and locate it, and that is all they ever do.
+same plate, so the loop closes inside the deck. The four 5/16-18s into the
+casting hold the deck flat and locate it, and that is all they ever do.
 
 The stops are round, which sounds like laziness and is the point: a round dog
 touches an edge exactly `head/2` from its hole's centre whichever way it was
@@ -260,7 +260,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and dog hole grid catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), and the Command strip, lead webbing, dog hole grid and drill stand catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance, and `dog_rig` for the pieces printed to find a number out rather than to use |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
