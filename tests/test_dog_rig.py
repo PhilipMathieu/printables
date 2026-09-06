@@ -107,6 +107,41 @@ def test_the_arm_is_stronger_than_the_shank_it_is_there_to_break(params):
     assert arm_z > 1.5 * shank_z
 
 
+def _kg_at_the_eye(moment):
+    """Mass hung on the arm's eye that puts a given moment into the root."""
+    return moment / (9.81 * dog_rig.ARM / 1000)
+
+
+def test_the_arm_reads_out_in_newton_metres_without_arithmetic(params):
+    """The reason ARM is 100 and not 120. At the bench the answer wants to be
+    readable off the scale, and at a tenth of a metre a kilogram is 0.981 N.m --
+    so the number you hang is the number at the root, to within two percent, and
+    nobody has to convert anything with a broken part in their hand."""
+    assert _kg_at_the_eye(1.0) == pytest.approx(1.0, abs=0.02)
+
+
+def test_the_arm_has_a_number_to_beat_and_a_number_to_clear(params):
+    """What the test is actually for, which is not "how strong is it" but "can
+    the clamp break its own shank". Two thresholds fall out of ``KNOB``: a light
+    hand needs 2.7kg or the clamp is unusable at any setting, and a firm hand
+    needs 5.4kg or the knob has to be small enough that a firm hand is not
+    available. Both sit inside the 3.2 to 5.5kg the arithmetic predicts, which
+    is the whole reason this gets printed rather than calculated."""
+    light, firm = bench_dogs.KNOB
+    unusable = _kg_at_the_eye(light * params.screw_height / 1000)
+    comfortable = _kg_at_the_eye(firm * params.screw_height / 1000)
+    assert unusable == pytest.approx(2.7, abs=0.1)
+    assert comfortable == pytest.approx(5.4, abs=0.1)
+
+    shank_z = math.pi * params.shank**3 / 32
+    predicted = [_kg_at_the_eye(shank_z * mpa / 1000) for mpa in (20, 35)]
+    assert predicted[0] < comfortable < predicted[1], (
+        "the firm-hand threshold has left the predicted range, so the arm no "
+        "longer decides anything -- re-read what changed"
+    )
+    assert unusable < predicted[0], "a light hand now breaks even the best case"
+
+
 def test_the_expected_break_is_a_weight_a_person_can_hang(params):
     """The point of a 100mm arm: the whole plausible range of answers lands
     between a bottle of water and a bucket of it."""

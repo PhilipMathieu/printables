@@ -164,6 +164,20 @@ things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
 | 3 | `--part pucks` | which backer interference seats flush and still grips |
 | 4 | `--part arm` ×2 | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight. Print the second with `--root 0.01`, or the fillet stays a claim |
 
+The arm is 100mm for a bench reason: **a kilogram on the eye is 0.981 N·m at the
+root**, so the number on the scale is the answer, to within 2%. Two thresholds
+to have in your pocket when it goes:
+
+| it breaks at | what that means |
+|---|---|
+| under **2.7 kg** | a *light* hand on the knob breaks a shank — the clamp is unusable as drawn |
+| 2.7–5.4 kg | usable, but a firm hand can break it. Fit a knob small enough that a firm hand is not available |
+| over **5.4 kg** | a firm hand is inside the margin. Nothing to change |
+
+The arithmetic predicts 3.2–5.5 kg, and both thresholds sit inside that — which
+is precisely why this gets printed instead of calculated. Break the square-rooted
+one first for the baseline; the gap between the two is what the fillet bought.
+
 Print the strip first for a reason beyond warp: nothing else can be tested
 without a hole to test it in, and the deck is six hours away. Measure it for
 flatness the moment it is off the plate, before it becomes a fixture.
