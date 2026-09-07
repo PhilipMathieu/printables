@@ -118,20 +118,29 @@ def test_only_the_head_touches_the_deck(params):
 
 
 def test_the_stand_off_says_how_big_the_block_may_be(params):
-    """Three millimetres is not picked for looks, and it does not buy unlimited
-    block. Shank clearance alone lets the arm cock in its hole before the hole
-    resists at all, and the root bends through more again before it lets go --
-    about 3.3 degrees between them. The lever has to stay clear through all of
-    it or it touches down mid-test and takes the load back, so the stand-off is
-    really a limit on how far the block may reach past the hole. It comes out a
-    little over 50mm, which is an ordinary offcut."""
-    stand = 3.0
-    cocking = params.fit / params.shank_length
-    stiffness = math.pi * params.shank**4 / 64
-    bending = 5.4e3 * params.shank_length / (3000 * stiffness)  # PLA, at the break
-    reach = stand / (cocking + bending)
-    assert 40 < reach < 70, f"block may reach {reach:.0f}mm past the hole"
-    assert stand < params.rise
+    """Three millimetres of stand-off does not buy unlimited block. The arm has
+    to stay clear through everything between snug and broken -- the shank cocks
+    in its clearance before the hole resists at all, then the root bends before
+    it goes -- or the lever touches down and takes the load back mid-test.
+
+    What it buys depends on the fit, which is why measuring it mattered beyond
+    the dogs themselves: at the guessed slip clearance the block could reach
+    53mm, and at the measured tight fit it reaches 90."""
+    reach = dog_rig.block_reach(params)
+    assert reach > 60, f"block may only reach {reach:.0f}mm; say so on the drawing"
+    assert dog_rig.STAND < params.rise
+    loose = dog_rig.block_reach(params.at("loose"))
+    assert loose < reach, "a looser fit has to buy less block, not more"
+
+
+def test_the_drawing_states_the_block_limit_it_computes(params):
+    """The house rule, checked on the one drawing whose numbers are load-bearing
+    rather than illustrative: the limit on the figure is the limit the model
+    computes, rounded, and not a constant somebody typed once."""
+    from tools import break_test
+
+    assert break_test.STAND == dog_rig.STAND
+    assert round(dog_rig.block_reach(params), -1) == pytest.approx(90.0)
 
 
 def test_the_arm_is_stronger_than_the_shank_it_is_there_to_break(params):
@@ -183,7 +192,7 @@ def test_the_expected_break_is_a_weight_a_person_can_hang(params):
     """The point of a 100mm arm: the whole plausible range of answers lands
     between a bottle of water and a bucket of it."""
     shank_z = math.pi * params.shank**3 / 32
-    for mpa, expect in ((20, 3.2), (35, 5.5)):
+    for mpa, expect in ((20, 3.3), (35, 5.8)):
         kg = shank_z * mpa / 1000 / (dog_rig.LEVER / 1000) / 9.81
         assert kg == pytest.approx(expect, abs=0.1)
 

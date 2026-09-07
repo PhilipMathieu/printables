@@ -78,7 +78,7 @@ shank, dog to M6 stud: one feature per part, not a redesign.
 
 **12 because 10 breaks in the hand.** A dog is a cantilever on a circular root,
 so what it survives goes as the cube of the diameter. A 9.65mm shank has a
-section modulus of 88mm³ against 155 for an 11.65mm one, and across printed
+section modulus of 88mm³ against 163 for an 11.85mm one, and across printed
 layers at 20–35 MPa that is a root letting go somewhere between 176 and 309 N
 applied 10mm up — while an M6 turned by hand on a knob delivers 250–500. Ten
 would break under a firm hand rather than under abuse. Twelve is the smallest
@@ -89,8 +89,8 @@ The cost is real and it is at the edge of the plate. Seven columns on 25mm span
 150 against a 152mm field, so the outermost column sits 1mm inside it, where at
 24mm it had 4. Its holes still bear more than half on casting and the rest is
 5mm of overhang on a 10mm plate, but it is the column to leave empty when a
-setup lets you. The older cost stands too: a 12mm hole takes an 11.65mm shank
-where a half-inch one took 12.35 — a sixth off the section modulus at the root.
+setup lets you. The older cost stands too: a 12mm hole takes an 11.85mm shank
+where a half-inch one took 12.35 — a ninth off the section modulus at the root.
 
 The stops are round, which sounds like laziness and is the point: a round dog
 touches an edge exactly `head/2` from its hole's centre whichever way it was
@@ -155,13 +155,23 @@ get going and cut the wooden one when the numbers have stopped moving.
 #### Finding the numbers that are left
 
 Everything settleable by arithmetic is settled and checked on every build. Four
-things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
+things are not, and `parts/dog_rig.py` is the cheapest object that answers each.
+Two are now answered, and the answers are in the defaults rather than in a note:
+
+The fit came back **two rungs tighter than assumed**. The reasoning had been that
+a dog wants to be a slip fit and no better, since a tight one has to be tapped
+out with something and the something is usually the workpiece — but on a printed
+12mm hole at a 0.4mm nozzle `tight` drops in under its own weight and comes out
+by hand. It is 0.2mm of shank for free: the root goes from 155 to 163mm³ of
+section modulus, and the arm's freedom to cock in its hole halves, which is what
+the break rig's block limit is computed from. Any new grid or nozzle gets the
+ladder printed again rather than inheriting this.
 
 | order | print | what it tells you |
 |---|---|---|
 | 1 | `--part strip` | whether a plate this long comes off the bed flat, before committing six hours to finding out — and then it *is* the test fixture, since it carries a real row of holes at full deck thickness for everything below |
-| 2 | `--part ladder` | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object |
-| 3 | `--part pucks` | which backer interference seats flush and still grips |
+| 2 | `--part ladder` | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object — **answered: `tight`, 0.15mm, and it is the default now** |
+| 3 | `--part pucks` | which backer interference seats flush and still grips — **answered: 0.25mm** |
 | 4 | `--part arm` ×2 | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight. Print the second with `--root 0.01`, or the fillet stays a claim. **Orientation matters and is not obvious** — see the drawing below |
 
 <img src="docs/break_test.png" alt="The break arm: as it prints with the shank up, turned over into a socket block, and what the weight it fails at means" width="100%">
@@ -198,7 +208,7 @@ to have in your pocket when it goes:
 | 2.7–5.4 kg | usable, but a firm hand can break it. Fit a knob small enough that a firm hand is not available |
 | over **5.4 kg** | a firm hand is inside the margin. Nothing to change |
 
-The arithmetic predicts 3.2–5.5 kg, and both thresholds sit inside that — which
+The arithmetic predicts 3.3–5.8 kg, and both thresholds sit inside that — which
 is precisely why this gets printed instead of calculated. Break the square-rooted
 one first for the baseline; the gap between the two is what the fillet bought.
 
@@ -209,13 +219,13 @@ flatness the moment it is off the plate, before it becomes a fixture.
 Print the batch on one plate. Two settings decide whether any of it transfers.
 
 **Walls, on anything with a shank.** Every strength figure above is for a solid
-root, and a shank is only 11.65mm across, so the shell is most of it:
+root, and a shank is only 11.85mm across, so the shell is most of it:
 
 | walls | core left | root, vs solid |
 |---|---|---|
-| 4 | 8.3mm | 74% — turns 3.1–5.4 N·m into 2.3–4.1 |
-| 6 | 6.6mm | 90% |
-| **8** | 4.9mm | **97% — effectively solid** |
+| 4 | 8.5mm | 74% — turns 3.3–5.7 N·m into 2.4–4.2 |
+| 6 | 6.8mm | 89% |
+| **8** | 5.1mm | **96% — effectively solid** |
 
 Use **8**. On parts this size it costs minutes, and it is the one setting the
 break number is really sensitive to.
@@ -236,8 +246,8 @@ gave you is about a different object. The two pairs need not match each other �
 a plate loaded in compression does not need eight walls.
 
 **The arm is the one to print first**, and the reason is a correction rather than
-a preference. An 11.65mm shank has a section modulus of 155mm³, so between 20
-and 35 MPa of layer adhesion it lets go somewhere between 3.1 and 5.4 N·m. The
+a preference. An 11.85mm shank has a section modulus of 163mm³, so between 20
+and 35 MPa of layer adhesion it lets go somewhere between 3.3 and 5.7 N·m. The
 force on the other side of that was quoted here as "a mild 200N", which was a
 guess dressed as a number. Preload is `F = T/(K·d)`, so an M6 under a hand on a
 knob is 250N turned lightly and **500N turned firmly** — and 500N at the bolt's

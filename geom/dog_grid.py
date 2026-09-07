@@ -18,8 +18,8 @@ is the same and someone will want to bolt this to a real bench.
 WHY NOT SMALLER HOLES, WHICH IS THE OBVIOUS ECONOMY. Ten on twenty-five is the
 tempting version and it is the one thing here that is not a preference. A dog
 is a cantilever and its root is a circle, so what it survives goes as the cube
-of the diameter: a 9.65mm shank has a section modulus of 88mm3 against 155 for
-an 11.65mm one. Across printed layers, at 20 to 35 MPa, that is a root that lets
+of the diameter: a 9.85mm shank has a section modulus of 94mm3 against 163 for
+an 11.85mm one. Across printed layers, at 20 to 35 MPa, that is a root that lets
 go somewhere between 176 and 309 newtons applied 10mm up. An M6 in the clamp
 turned by hand on a knob delivers 250 to 500. A 10mm dog therefore breaks under
 a firm hand, not under abuse, and no amount of pitch cleverness recovers that.
@@ -45,7 +45,7 @@ numbers are still moving, and a bought or tapped plate is what it becomes.
 
 The pitch is what carries over. A fence spans a whole number of pitches and a
 clamp straddles exactly one, so both are already cut for a breadboard; what
-would change is the shank, from an 11.65mm dog to an M6 stud, which is one
+would change is the shank, from an 11.85mm dog to an M6 stud, which is one
 feature on each part rather than a redesign. Two details worth knowing before
 counting on it. A 150mm board at this pitch holds six holes with 12.5mm edge
 margin, an *even* count -- so its centre falls between four holes and it has no
@@ -79,9 +79,10 @@ of a 10mm plate, which is stiff enough not to matter for anything this machine
 can push; but it is the column to leave empty when a setup lets you, and it is a
 locating column rather than one to hang a clamp's whole preload off.
 
-The other cost is unchanged and older: a 12mm hole takes an 11.65mm shank where
-a half inch one took 12.35, and that is a sixth off the section modulus at the
-root. It is 3.2 to 5.5kg on the break arm rather than 3.8 to 6.6.
+The other cost is unchanged and older: a 12mm hole takes an 11.85mm shank where
+a half inch one took 12.35, and that is a ninth off the section modulus at the
+root. It is 3.3 to 5.8kg on the break arm rather than 3.8 to 6.6 -- and it was a
+sixth until the ladder came back tight rather than slip.
 
 THE CENTRE STATION IS NOT OPTIONAL. One hole has to sit exactly on the spindle
 axis. It is where the sacrificial backer goes, it is what you line the deck up
@@ -173,11 +174,18 @@ ones do not fit a 10mm deck.
 FITS = {"loose": 0.50, "slip": 0.35, "snug": 0.25, "tight": 0.15}
 """Diametral clearance between a dog shank and its hole, in mm.
 
-These are guesses until a plate has been printed, which is what ``--ladder`` is
-for: print one stop at each fit, keep the tightest that still drops in under its
-own weight, and set that as the default. A dog wants to be a slip fit and no
-better -- a tight one has to be tapped out with something, and the something is
-usually the workpiece.
+These were guesses until a plate was printed, which is what ``--ladder`` is for:
+print one stop at each fit, keep the tightest that still drops in under its own
+weight, and set that as the default. Which has now been done, and the answer was
+``tight``.
+
+That is two rungs tighter than this first assumed, and the assumption is worth
+recording because it was reasoned rather than measured: a dog wants to be a slip
+fit and no better, went the argument, because a tight one has to be tapped out
+with something and the something is usually the workpiece. On a printed 12mm
+hole at 0.4mm nozzle that turned out to be over-cautious -- ``tight`` drops in
+under its own weight and comes out by hand. Any new grid or nozzle gets the
+ladder printed again rather than inheriting this.
 """
 
 LADDER = ("loose", "slip", "snug", "tight")

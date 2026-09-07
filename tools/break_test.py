@@ -49,10 +49,10 @@ WARN = "#d9a441"
 
 EYE = 8.0
 WIDTH = 20.0
-STAND = 3.0
-BLOCK = 50.0
-"""How far the block may reach past the hole, in mm. Set by ``STAND`` and the
-rotation the arm has to be free to make -- see ``dog_rig.arm``."""
+STAND = dog_rig.STAND
+"""Both read from the model rather than set here, because the drawing has to be
+wrong when the part is, not agreeable. ``BLOCK`` is a function of the measured
+fit, so it moved when the ladder was printed -- see ``dog_rig.block_reach``."""
 
 
 def _outline(p, flipped: bool, upto: float):
@@ -121,7 +121,7 @@ def _rig_panel(ax, p):
     ax.set_title(f"the setup, in section · eye at {at:.0f} mm, "
                  f"effective arm {dog_rig.LEVER:.0f} mm", color=INK, fontsize=11)
     rs, rh = p.shank / 2, p.head / 2
-    block_t, bench_t, edge = 19.0, 30.0, BLOCK
+    block_t, bench_t, edge = 19.0, 30.0, round(dog_rig.block_reach(p), -1)
 
     ax.add_patch(Rectangle((-190, -block_t - bench_t), 190 + edge, bench_t,
                            fc=BENCH, ec=INK, lw=1.0, zorder=1))
@@ -148,7 +148,7 @@ def _rig_panel(ax, p):
     ax.add_patch(Circle((at, (p.rise - STAND) / 2), EYE / 2, fc="white", ec=INK,
                         lw=1.0, zorder=7))
 
-    ax.annotate(f"the block must stop within {BLOCK:.0f} mm of the hole, or the\n"
+    ax.annotate(f"the block must stop within {edge:.0f} mm of the hole, or the\n"
                 "lever touches down and quietly takes the load back",
                 xy=(edge, -2.0), xytext=(edge - 4, -52), color=BAD, fontsize=8.5, ha="center",
                 arrowprops=dict(arrowstyle="-|>", color=BAD, lw=1.1,

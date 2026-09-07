@@ -9,9 +9,9 @@ destroyed.
 WHAT IS ACTUALLY UNKNOWN, in the order it would hurt:
 
 1. How much a shank root holds. The fillet is a guess, and the numbers no longer
-   say the margin is thin -- they say there may not be one. An 11.65mm shank has
-   a section modulus of 155mm^3, so at somewhere between 20 and 35 MPa of layer
-   adhesion it lets go between 3.1 and 5.4 N.m. Against that, the clamp at a
+   say the margin is thin -- they say there may not be one. An 11.85mm shank has
+   a section modulus of 163mm^3, so at somewhere between 20 and 35 MPa of layer
+   adhesion it lets go between 3.3 and 5.7 N.m. Against that, the clamp at a
    firm hand on its knob (``bench_dogs.KNOB``, 500N, corrected upwards from a
    guessed 200) puts 5.2 N.m into the root. That is inside the range the root
    fails in, not below it. A light hand at 250N gives 2.6 and is comfortable, so
@@ -32,6 +32,7 @@ truncated one saves a quarter of an hour and changes the thing being measured.
 
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 
 from build123d import Align, Box, Cylinder, Part, Plane, Pos, RectangleRounded, extrude
@@ -57,12 +58,41 @@ distance. The eye therefore sits half a head further out than the number that
 comes off the scale. See ``arm``.
 """
 
+STAND = 3.0
+"""How far the break arm's lever stands clear of the deck, in mm.
+
+The fix for the flaw in ``arm``, and a limit on the block in the same number --
+see ``block_reach``.
+"""
+
+
+def block_reach(params: Params, stand: float = STAND) -> float:
+    """How far the block may reach past the hole in the break test, in mm.
+
+    The arm has to be free to rotate through everything between snug and broken
+    or the lever touches down and quietly takes the load back. Two things add
+    up: the shank cocks in its clearance before the hole resists at all, and
+    then the root bends before it lets go. The stand-off has to outlast both at
+    the block's outer edge, which is what this solves for.
+
+    Measuring the fit paid for itself here. At the guessed slip clearance the
+    arm cocked 2.2 degrees before the hole did anything and the block could only
+    reach 53mm; at the measured tight fit it is 1.0 and the block may reach 90,
+    which is the difference between specifying an offcut and specifying a
+    particular offcut.
+    """
+    cocking = params.fit / params.shank_length
+    stiffness = math.pi * params.shank**4 / 64
+    bending = 5.4e3 * params.shank_length / (3000 * stiffness)  # PLA, at the break
+    return stand / (cocking + bending)
+
+
 PUCK_GRIPS = (0.15, 0.25, 0.35, 0.45)
 """Diametral interferences worth trying on a backer, loosest first."""
 
 
 def arm(params: Params, lever: float = LEVER, width: float = 20.0,
-        eye: float = 8.0, stand: float = 3.0) -> Part:
+        eye: float = 8.0, stand: float = STAND) -> Part:
     """A stop with a lever on it, for breaking one root on purpose.
 
     Drop it in a hole, clamp the block down, hang a bag off the eye and fill the

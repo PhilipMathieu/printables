@@ -26,7 +26,7 @@ hand can apply is the limit rather than the plastic being it.
 
 That second one is not a nicety, which is what the corrected numbers in ``KNOB``
 changed. A firm hand on a knob is 500N, and 500N at the bolt's height is 5.2 N.m
-against a root that holds 3.1 to 5.4. The knob is not buying margin on top of a
+against a root that holds 3.3 to 5.7. The knob is not buying margin on top of a
 comfortable design; it is most of the margin there is.
 
 WHAT THE FOUR MOUNTING BOLTS ACTUALLY SEE, which is almost nothing. A fence and
@@ -109,7 +109,7 @@ knob turned lightly at 0.3 N.m gives 250N and one turned firmly at 0.6 gives
 500. This corrected an earlier figure of 200N, which was a guess dressed as a
 number and was optimistic by somewhere between a quarter and a factor of two
 and a half. It matters because 500N times the bolt's height above the deck is
-5.2 N.m at a shank root that holds 3.1 to 5.4, so a firm hand is not inside the
+5.2 N.m at a shank root that holds 3.3 to 5.7, so a firm hand is not inside the
 margin -- it is on it. See ``parts.dog_rig``.
 
 A SMALLER SCREW MAKES THIS WORSE, WHICH IS THE OPPOSITE OF THE FIRST INSTINCT.
@@ -139,9 +139,20 @@ class Params:
 
     grid: Grid = dog_grid.DEFAULT
     """The hole pattern every part here plugs into."""
-    fit: float = dog_grid.FITS["slip"]
-    """Diametral clearance between a shank and its hole. Print the ladder before
-    trusting this one -- see ``geom.dog_grid.FITS``."""
+    fit: float = dog_grid.FITS["tight"]
+    """Diametral clearance between a shank and its hole.
+
+    Measured, not guessed: the ladder was printed and the tight rung was the
+    tightest that still dropped in under its own weight, which is the whole test.
+    This started at slip, two rungs looser, on the reasoning that a printed hole
+    comes out undersize -- it did not, or not by enough to matter, and the reason
+    to say so here is that the same reasoning would otherwise get applied again
+    to the next grid.
+
+    It is 0.2mm of shank the design gets for free. The root goes from 155 to
+    163mm3 of section modulus, and the arm's freedom to cock in its hole halves,
+    which is what the break rig's block limit is set from.
+    """
 
     # --- the stop ---------------------------------------------------------
     head: float = 16.0
