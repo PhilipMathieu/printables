@@ -19,12 +19,18 @@ WHAT IS ACTUALLY UNKNOWN, in the order it would hurt:
    unknown. ``arm`` turns the question into a weight you can hang, and it is now
    the first thing to print rather than the interesting one.
 
-2. Whether a printed plate this long comes off the bed flat. ``strip`` is the
-   cheap proxy, with the caveat in its own docstring.
+2. ANSWERED. Whether a printed plate this long comes off the bed flat. ``strip``
+   was printed in PLA at 182mm and came off flat, which clears the printed deck
+   -- and is the one result here that argues *against* the part that produced
+   it, since the reason to prefer a wooden deck was never accuracy but stiffness
+   and creep. Both routes are open; ``dog_deck.template`` is still the way to
+   the wooden one.
 
-3. Whether a backer actually grips. ``puck_ladder``, four grips, ten minutes.
+3. ANSWERED. Whether a backer actually grips. ``puck_ladder`` came back at the
+   default 0.25mm of interference, so nothing moved.
 
-The two that need no special part: the shank clearance, which
+The two that needed no special part: the shank clearance, which came back two
+rungs tighter than assumed -- see ``bench_dogs.Params.fit`` -- and which
 ``bench_dogs.ladder`` already covers, and whether the clamp tips its front
 shanks out of their holes under load -- print the real clamp for that, because a
 truncated one saves a quarter of an hour and changes the thing being measured.

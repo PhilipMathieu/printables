@@ -144,6 +144,42 @@ def test_the_deck_costs_no_stroke(deck):
     assert STAND.stroke > 39.5  # a 1590BB stood on end, the tallest likely case
 
 
+# --- a wooden deck, bored through the template -----------------------------
+
+
+def test_a_board_thinner_than_the_grid_is_refused(deck):
+    """The trap in going wooden, and it is one common board size wide. Shanks
+    are cut to the grid's deck less relief, so a board under that has every one
+    of them standing proud underneath and holding the deck off the casting --
+    which is the failure the deck exists to prevent, arriving by way of the
+    deck. 9mm MDF is what a merchant hands you if you ask for about ten."""
+    grid = deck.grid
+    assert not dog_deck.suits_board(9.0, grid)
+    assert not dog_deck.suits_board(6.0, grid)
+    assert dog_deck.suits_board(grid.deck, grid)
+    assert dog_deck.suits_board(12.0, grid), "12mm MDF is the size to buy"
+
+
+def test_a_thicker_board_is_fine_until_the_bolt_runs_out(deck):
+    """The upper end is set by the hardware rather than the dogs: the shank
+    engages the top of the hole whatever is beneath it, but the mounting bolt
+    has to cross the casting, the board and a counterbored jam nut. A 1in
+    5/16-18 covers 18mm ply with room; the limit is a shade under 21."""
+    for thickness in (12.0, 18.0):
+        assert dog_deck.suits_board(thickness, deck.grid)
+        assert STAND.bolt(thickness, sunk=6.0, nut=4.4) < 25.4
+    assert STAND.bolt(21.0, sunk=6.0, nut=4.4) > 25.4
+
+
+def test_the_template_pilots_a_board_the_dogs_will_fit(deck):
+    """The two halves of the wooden route have to agree: the template lays out
+    the grid the dogs were cut for, and the board it is laid out on has to be
+    one those dogs suit. Nothing else in the suite joins those two facts."""
+    assert dog_deck.suits_board(12.0, deck.grid)
+    board = dog_deck.template(deck).bounding_box()
+    assert board.size.X < deck.width and board.size.Y < deck.depth
+
+
 # --- the catalogue ---------------------------------------------------------
 
 

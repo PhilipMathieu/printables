@@ -200,16 +200,42 @@ def build(params: Params) -> Part:
     return plate - holes
 
 
+def suits_board(thickness: float, grid: Grid = dog_grid.DEFAULT) -> bool:
+    """Whether a wooden deck of this thickness takes the dogs already printed.
+
+    One-sided, and the side matters. Thicker is fine: the shank engages the top
+    of the hole either way and the extra is material around it. Thinner is not,
+    because shanks are cut to ``grid.deck`` less their relief and a board under
+    that has them standing proud underneath, holding the deck off the casting --
+    the failure the deck exists to prevent, arriving by way of the deck.
+
+    So the rule is one comparison, and it is here rather than in a sentence in
+    the README because the nearest common board is on the wrong side of it: 9mm
+    MDF fails a 10mm grid, 12mm passes with two to spare. The upper end is set
+    by the mounting hardware rather than the dogs, and lives in the stand's
+    tests where the bolt length is.
+    """
+    return thickness >= grid.deck
+
+
 def template(
     params: Params, thickness: float = 2.5, rib: float = 14.0, pilot: float = 3.2
 ) -> Part:
     """A drilling template: the grid as pilot holes, for boring a wooden deck.
 
     Clamp it to the board, run a 3mm bit through every hole, take it off, and
-    bore the half inch holes on the drill press with a brad point or a Forstner
-    dropped into each pilot. The grid then comes off the same arithmetic as the
-    printed plate rather than off a rule and a square, which is the only reason
-    the printed plate was preferred in the first place.
+    bore the 12mm holes on the stand with a brad point or a Forstner dropped
+    into each pilot. The grid then comes off the same arithmetic as the printed
+    plate rather than off a rule and a square, which is the only reason the
+    printed plate was preferred in the first place.
+
+    THE BOARD HAS TO BE THICK ENOUGH FOR THE DOGS ALREADY CUT, and the trap is
+    that the nearest common size is on the wrong side of it. Shanks are cut to
+    the grid's deck less its relief, so a board thinner than ``grid.deck`` has
+    every shank standing proud of its underside -- which is the one thing that
+    stands the whole deck off the casting and undoes the flatness the deck
+    exists to provide. At 10mm that rules out 9mm MDF, which is what a merchant
+    hands you if you ask for "about ten". See ``suits_board``.
 
     A lattice rather than a sheet, because a solid template of this footprint is
     half the material of the deck it exists to avoid printing. Ribs down every

@@ -152,11 +152,29 @@ every hole, then bore the 12mm holes to the pilots. A fifth of the deck to
 print, and the wooden deck comes out with the grid exactly. Print the plate to
 get going and cut the wooden one when the numbers have stopped moving.
 
+**Buy 12mm MDF, and mind the size below it.** Shanks are cut to the grid's deck
+less their relief, so a board thinner than 10mm has every dog standing proud
+underneath and holding the deck off the casting — the exact failure the deck
+exists to prevent, arriving by way of the deck. 9mm MDF is what a merchant hands
+you if you ask for "about ten", and it is the one size that fails. Thicker is
+fine up to about 21mm, where the 1" mounting bolt runs out rather than the dogs
+do. `dog_deck.suits_board` is the one comparison, and it is checked.
+
+Cut the board to 182 × 132, set the template so an even 9mm of board shows on
+every side, and clamp. Pilot with a hand drill rather than on the stand — the
+board is wider than this machine's throat, so the far row cannot be reached
+without turning it around, and the pilots are the step where that would cost you
+the grid.
+
 #### Finding the numbers that are left
 
 Everything settleable by arithmetic is settled and checked on every build. Four
 things are not, and `parts/dog_rig.py` is the cheapest object that answers each.
 Two are now answered, and the answers are in the defaults rather than in a note:
+
+**The strip came off flat**, which clears the printed deck — and is the one
+result that argues against the part that produced it, since the case for a
+wooden deck was never accuracy but stiffness and creep. Both routes are open.
 
 The fit came back **two rungs tighter than assumed**. The reasoning had been that
 a dog wants to be a slip fit and no better, since a tight one has to be tapped
@@ -169,7 +187,7 @@ ladder printed again rather than inheriting this.
 
 | order | print | what it tells you |
 |---|---|---|
-| 1 | `--part strip` | whether a plate this long comes off the bed flat, before committing six hours to finding out — and then it *is* the test fixture, since it carries a real row of holes at full deck thickness for everything below |
+| 1 | `--part strip` | whether a plate this long comes off the bed flat, before committing six hours to finding out — and then it *is* the test fixture, since it carries a real row of holes at full deck thickness for everything below — **answered: flat, in PLA at 182mm** |
 | 2 | `--part ladder` | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object — **answered: `tight`, 0.15mm, and it is the default now** |
 | 3 | `--part pucks` | which backer interference seats flush and still grips — **answered: 0.25mm** |
 | 4 | `--part arm` ×2 | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight. Print the second with `--root 0.01`, or the fillet stays a claim. **Orientation matters and is not obvious** — see the drawing below |
