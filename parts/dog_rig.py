@@ -39,24 +39,54 @@ from build123d import Align, Box, Cylinder, Part, Plane, Pos, RectangleRounded, 
 from parts import bench_dogs, dog_deck
 from parts.bench_dogs import Params
 
-ARM = 100.0
-"""Distance from the shank's axis to the eye, in mm. Round, so the moment is
-the hung mass in kilograms times a hundred -- and long enough that the whole
-useful range of answers lands between two and seven kilograms, which is a range
-you can hit with a bottle and a jug of water rather than a load cell."""
+LEVER = 100.0
+"""Effective moment arm at the shank root, in mm.
+
+Round, so the moment is the hung mass in kilograms times a hundred -- 0.981 N.m
+per kilogram, near enough that the scale reads out in the units the design is
+argued in. And long enough that the whole useful range of answers lands between
+two and seven kilograms, which is a bottle and a jug of water rather than a
+load cell.
+
+IT IS NOT THE DISTANCE TO THE EYE, and the difference is the whole reason this
+constant is not just called ARM any more. The arm bears on the deck through the
+head, and under load it tips onto the head's *outboard* edge -- half a head out
+from the axis. Vertical equilibrium puts the deck's whole reaction there, so the
+root sees the load times (eye distance minus half a head), not times the eye
+distance. The eye therefore sits half a head further out than the number that
+comes off the scale. See ``arm``.
+"""
 
 PUCK_GRIPS = (0.15, 0.25, 0.35, 0.45)
 """Diametral interferences worth trying on a backer, loosest first."""
 
 
-def arm(params: Params, length: float = ARM, width: float = 14.0,
-        eye: float = 8.0) -> Part:
+def arm(params: Params, lever: float = LEVER, width: float = 20.0,
+        eye: float = 8.0, stand: float = 3.0) -> Part:
     """A stop with a lever on it, for breaking one root on purpose.
 
-    Drop it in a hole, clamp the deck down, hang a bag off the eye and fill the
+    Drop it in a hole, clamp the block down, hang a bag off the eye and fill the
     bag by weight until something goes. The moment at the root is the mass times
-    ``length``, so the number that comes out is directly comparable with what
-    the clamp can apply -- which is the only reason to know it.
+    ``lever``, so the number that comes out is directly comparable with what the
+    clamp can apply -- which is the only reason to know it.
+
+    THE LEVER STANDS OFF THE DECK, AND THE FIRST DRAWING OF THIS DID NOT. It was
+    a flat paddle coplanar with the head's seat, which meant it lay flat on the
+    deck -- and a lever lying on the surface its own fulcrum is in hands the
+    moment straight to the surface. Taking moments about the shank axis with the
+    deck reacting at distance ``a``, the root sees ``W (lever - a)``: on a 50mm
+    offcut that is two thirds of the intended load, and on the real 182mm deck,
+    with the plate bearing all the way out to its edge, it is *nine percent* of
+    it. The arm would have come back reading four times too strong and there
+    would have been nothing in the result to say so.
+
+    So the lever is ``stand`` clear of the seat plane and only the head touches.
+    That fixes ``a`` at half a head whatever the block is cut to, and the eye
+    goes half a head further out so the effective arm is exactly ``lever``.
+    ``stand`` is 3mm because the arm has to be free to rotate: shank clearance
+    alone lets it cock about 2 degrees before the hole even starts to resist,
+    and the root bends through another degree before it breaks, so anything less
+    would have the lever touch down mid-test and quietly take the load back.
 
     The arm is deliberately the stronger end. Its root section modulus is nearly
     twice the shank's, and it is loaded along its layers where the shank is
@@ -65,17 +95,32 @@ def arm(params: Params, length: float = ARM, width: float = 14.0,
     the limit, up the shank means the fillet did its job and moved the weak
     point somewhere the design does not care about.
 
-    For the comparison, print a second one with ``--root 0.05``. That is a
+    For the comparison, print a second one with ``--root 0.01``. That is a
     square root in all but name, and the difference between the two is what the
     fillet bought.
     """
     params.validate()
+    if stand >= params.rise:
+        raise ValueError(
+            f"a {stand}mm stand-off leaves no lever under a {params.rise}mm head"
+        )
     body = bench_dogs.stop(params)
+    deep = params.rise - stand
+    at_eye = lever + params.head / 2
     body += Box(
-        length + width, width, params.rise,
-        align=(Align.MIN, Align.CENTER, Align.MIN),
+        at_eye + width, width, deep, align=(Align.MIN, Align.CENTER, Align.MIN),
     )
-    return body - Pos(length, 0, params.rise / 2) * Cylinder(eye / 2, params.rise * 3)
+    return body - Pos(at_eye, 0, deep / 2) * Cylinder(eye / 2, params.rise * 3)
+
+
+def eye_at(params: Params, lever: float = LEVER) -> float:
+    """Where the eye sits, measured from the shank axis.
+
+    Half a head further out than the effective arm, because that is where the
+    deck's reaction lands. Anything that wants to draw or check the arm should
+    ask for this rather than assume the two are the same number.
+    """
+    return lever + params.head / 2
 
 
 def puck_ladder(params: Params) -> list[Part]:

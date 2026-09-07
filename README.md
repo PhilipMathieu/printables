@@ -162,7 +162,31 @@ things are not, and `parts/dog_rig.py` is the cheapest object that answers each:
 | 1 | `--part strip` | whether a plate this long comes off the bed flat, before committing six hours to finding out — and then it *is* the test fixture, since it carries a real row of holes at full deck thickness for everything below |
 | 2 | `--part ladder` | shank clearance: keep the tightest that drops in under its own weight. Each stop carries its fit engraved in the face you look at, because four dogs differing by 0.15mm of shank are otherwise the same object |
 | 3 | `--part pucks` | which backer interference seats flush and still grips |
-| 4 | `--part arm` ×2 | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight. Print the second with `--root 0.01`, or the fillet stays a claim |
+| 4 | `--part arm` ×2 | what a shank root actually holds — hang a bag off the 100mm lever and fill it by weight. Print the second with `--root 0.01`, or the fillet stays a claim. **Orientation matters and is not obvious** — see the drawing below |
+
+<img src="docs/break_test.png" alt="The break arm: as it prints with the shank up, turned over into a socket block, and what the weight it fails at means" width="100%">
+
+```sh
+python -m tools.break_test        # redraws it from the model
+```
+
+Two things about that setup are load-bearing, and the first version of this part
+got the second one wrong. **The arm is turned over from how it prints** — every
+part in the set is, since a shank is always narrower than what it grows out of
+and putting it last is what keeps the overhangs at zero. And **the lever must
+never touch the surface the shank is in.** A lever lying on the deck its own
+fulcrum is in hands the moment straight to the deck: taking moments about the
+shank axis with the deck reacting at distance `a`, the root sees `W × (100 − a)`.
+On the real 182mm plate that is nine percent of the intended load, so the arm
+would have read four times too strong with nothing in the result to say so.
+
+So the lever stands 3mm clear of the seat plane and only the head bears. That
+fixes the reaction at half a head out whatever the block is cut to, and the eye
+sits half a head further out (108mm) so the effective arm is exactly 100. The
+3mm is also a limit on the block: shank clearance lets the arm cock about 2°
+before the hole resists at all and the root bends through another degree before
+it goes, so **the block must not reach more than 50mm past the hole** or the
+lever touches down mid-test.
 
 The arm is 100mm for a bench reason: **a kilogram on the eye is 0.981 N·m at the
 root**, so the number on the scale is the answer, to within 2%. Two thresholds

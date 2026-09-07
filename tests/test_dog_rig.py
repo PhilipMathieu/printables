@@ -89,19 +89,56 @@ def test_the_template_aligns_off_the_decks_own_edges(deck, template):
 
 def test_the_arm_puts_the_eye_a_known_distance_from_the_shank(params):
     """The moment is the hung mass times this, so if it is not what it says the
-    number that comes out means nothing."""
+    number that comes out means nothing. The eye sits half a head beyond the
+    effective arm, because that is where the deck's reaction lands."""
     body = dog_rig.arm(params)
-    t = 2.5
-    at_eye = body & (Pos(dog_rig.ARM, 0, params.rise / 2) * Cylinder(1.0, params.rise))
-    assert at_eye.volume == pytest.approx(0, abs=1e-6)
-    assert body.bounding_box().max.X == pytest.approx(dog_rig.ARM + 14.0)
+    at = dog_rig.eye_at(params)
+    assert at == pytest.approx(dog_rig.LEVER + params.head / 2)
+    probe = body & (Pos(at, 0, (params.rise - 3.0) / 2) * Cylinder(1.0, params.rise))
+    assert probe.volume == pytest.approx(0, abs=1e-6)
+    assert body.bounding_box().max.X == pytest.approx(at + 20.0)
+
+
+def test_only_the_head_touches_the_deck(params):
+    """The mistake this part was drawn with, and the one that would not have
+    announced itself. A lever coplanar with the head's seat lies flat on the
+    deck, and a lever lying on the surface its own fulcrum is in hands the
+    moment straight to the surface: taking moments about the shank axis with the
+    deck reacting at distance a, the root sees W (lever - a). On the real 182mm
+    plate that is nine percent of the intended load, so the arm would have come
+    back reading four times too strong with nothing in the result to say so.
+    Everything outboard of the head has to be clear of the seat plane."""
+    body = dog_rig.arm(params)
+    seat = params.rise  # model z of the face that lands on the deck
+    for x in (params.head, 40.0, dog_rig.eye_at(params) - 12.0):
+        under = body & (Pos(x, 0, seat - 0.5) * Cylinder(2.0, 1.0))
+        assert under.volume == pytest.approx(0, abs=1e-6), f"lever touches at x={x}"
+    on_head = body & (Pos(0, 0, seat - 0.5) * Cylinder(params.head / 2, 1.0))
+    assert on_head.volume > 0, "the head still has to bear on something"
+
+
+def test_the_stand_off_says_how_big_the_block_may_be(params):
+    """Three millimetres is not picked for looks, and it does not buy unlimited
+    block. Shank clearance alone lets the arm cock in its hole before the hole
+    resists at all, and the root bends through more again before it lets go --
+    about 3.3 degrees between them. The lever has to stay clear through all of
+    it or it touches down mid-test and takes the load back, so the stand-off is
+    really a limit on how far the block may reach past the hole. It comes out a
+    little over 50mm, which is an ordinary offcut."""
+    stand = 3.0
+    cocking = params.fit / params.shank_length
+    stiffness = math.pi * params.shank**4 / 64
+    bending = 5.4e3 * params.shank_length / (3000 * stiffness)  # PLA, at the break
+    reach = stand / (cocking + bending)
+    assert 40 < reach < 70, f"block may reach {reach:.0f}mm past the hole"
+    assert stand < params.rise
 
 
 def test_the_arm_is_stronger_than_the_shank_it_is_there_to_break(params):
     """Otherwise the test measures the lever. Twice the section modulus, and
     loaded along its layers where the shank is loaded across them, so the margin
     is larger than the ratio makes it look."""
-    width, height = 14.0, params.rise
+    width, height = 20.0, params.rise - 3.0
     arm_z = width * height**2 / 6
     shank_z = math.pi * params.shank**3 / 32
     assert arm_z > 1.5 * shank_z
@@ -109,11 +146,11 @@ def test_the_arm_is_stronger_than_the_shank_it_is_there_to_break(params):
 
 def _kg_at_the_eye(moment):
     """Mass hung on the arm's eye that puts a given moment into the root."""
-    return moment / (9.81 * dog_rig.ARM / 1000)
+    return moment / (9.81 * dog_rig.LEVER / 1000)
 
 
 def test_the_arm_reads_out_in_newton_metres_without_arithmetic(params):
-    """The reason ARM is 100 and not 120. At the bench the answer wants to be
+    """The reason LEVER is 100 and not 120. At the bench the answer wants to be
     readable off the scale, and at a tenth of a metre a kilogram is 0.981 N.m --
     so the number you hang is the number at the root, to within two percent, and
     nobody has to convert anything with a broken part in their hand."""
@@ -147,7 +184,7 @@ def test_the_expected_break_is_a_weight_a_person_can_hang(params):
     between a bottle of water and a bucket of it."""
     shank_z = math.pi * params.shank**3 / 32
     for mpa, expect in ((20, 3.2), (35, 5.5)):
-        kg = shank_z * mpa / 1000 / (dog_rig.ARM / 1000) / 9.81
+        kg = shank_z * mpa / 1000 / (dog_rig.LEVER / 1000) / 9.81
         assert kg == pytest.approx(expect, abs=0.1)
 
 

@@ -1,17 +1,20 @@
 """Make the drill press dog set from the command line, and see how it works.
 
-    python -m tools.bench_dogs --part ladder          # print this first
+    python -m tools.bench_dogs --part strip           # print this first
     python -m tools.bench_dogs --part deck
     python -m tools.bench_dogs --set --copies 1       # a starter plate
     python -m tools.bench_dogs --part fence --span 6
 
-``--part ladder`` is the one to run first: four stops at four shank clearances,
-about twenty minutes of printing, and the tightest one that still drops into the
-deck under its own weight tells you what ``--fit`` should be for everything
-else. Nothing in the set is worth printing at scale before that is known.
+``--part strip`` is the one to run first: it answers whether a plate this long
+comes off the bed flat before six hours of deck goes into finding out, and it is
+the only thing in the rig with a real row of holes at deck thickness, so it is
+the fixture the other tests are done in. Then ``--part ladder``, four stops at
+four shank clearances, whose tightest one that still drops in under its own
+weight tells you what ``--fit`` should be for everything else. Nothing in the
+set is worth printing at scale before that is known.
 
 Then the deck, then a starter plate. The fence and the deck are their own
-prints -- at 130 and 184mm they do not lay out usefully beside a 16mm stop.
+prints -- at 128 and 182mm they do not lay out usefully beside a 16mm stop.
 
 The preview is three views: the part as it comes off the plate, a plan of the
 whole set holding a pedal enclosure so it is obvious what plugs in where, and a
@@ -354,9 +357,9 @@ def main(argv: list[str] | None = None) -> int:
         import math
 
         z = math.pi * params.shank**3 / 32
-        lo, hi = (z * mpa / 1000 / (dog_rig.ARM / 1000) / 9.81 for mpa in (20, 35))
+        lo, hi = (z * mpa / 1000 / (dog_rig.LEVER / 1000) / 9.81 for mpa in (20, 35))
         print(f"expect the root to go somewhere between {lo:.1f} and {hi:.1f} kg "
-              f"on the {dog_rig.ARM:.0f}mm arm; the clamp applies "
+              f"on the {dog_rig.LEVER:.0f}mm arm; the clamp applies "
               f"{200 * params.screw_height / 1000:.1f} N.m at a mild 200 N")
     bb = part.bounding_box()
     print(f"{label}: {len(built)} part{'s' if len(built) > 1 else ''}, "
