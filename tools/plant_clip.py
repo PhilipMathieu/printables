@@ -146,6 +146,16 @@ def preview(params: Params, dest: Path, part: Part | None = None) -> Path:
     return dest
 
 
+def draw(dest: Path | None = None) -> Path:
+    """The house entry point: redraw this part's figure from the model.
+
+    Every load-bearing part has one -- see CLAUDE.md. It takes no arguments so
+    the drawing can always be regenerated, and so a test can prove it still
+    can.
+    """
+    return preview(Params(), dest or Path("docs/plant_clip.png"))
+
+
 def params_from(args: argparse.Namespace) -> list[Params]:
     """One Params per clip on the plate, sizes first and copies after."""
     base = Params(

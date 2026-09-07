@@ -267,6 +267,19 @@ def preview(params: bench_dogs.Params, deck: dog_deck.Params, part: Part,
     return dest
 
 
+def draw(dest: Path | None = None) -> Path:
+    """The house entry point: redraw this part's figure from the model.
+
+    Every load-bearing part has one -- see CLAUDE.md. It takes no arguments so
+    the drawing can always be regenerated, and so a test can prove it still
+    can. A stop is the subject because the set's whole load path runs through
+    one: work bears on its face, its face on its shank, its shank on a hole.
+    """
+    params, deck = bench_dogs.Params(), dog_deck.Params()
+    return preview(params, deck, bench_dogs.stop(params), "stop",
+                   dest or Path("docs/bench_dogs.png"))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--part", default="stop",

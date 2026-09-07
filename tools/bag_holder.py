@@ -200,6 +200,16 @@ def preview(params: Params, dest: Path, part: Part | None = None) -> Path:
     return dest
 
 
+def draw(dest: Path | None = None) -> Path:
+    """The house entry point: redraw this part's figure from the model.
+
+    Every load-bearing part has one -- see CLAUDE.md. It takes no arguments so
+    the drawing can always be regenerated, and so a test can prove it still
+    can.
+    """
+    return preview(Params(), dest or Path("docs/bag_holder.png"))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--strap", default="standard",

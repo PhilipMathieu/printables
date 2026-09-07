@@ -382,6 +382,30 @@ rings turns the same part into a coaster.
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
 | `tests/` | Design intent, asserted against the built solid |
+| `CLAUDE.md` | House rules, including the diagram and statics loop below |
+
+### The diagram and statics loop
+
+Anything that carries load gets **drawn in section, from the model, and solved**
+before it is printed. Two mechanical errors have got through here — the clamp's
+nut trap opening the way the load pushed, and the break arm's lever lying on the
+surface its own fulcrum was in — and both were invisible in a paragraph and
+obvious in a drawing. Neither was a hard calculation; both were a free-body
+diagram nobody drew.
+
+So: name the load path in the module docstring, draw it with a generator in
+`tools/` that reads the real `Params`, take moments about the contacts the
+drawing shows you, and then assert the contact set the statics assumed — that
+the part bears *here* and nowhere else, which is the assumption that fails
+silently and is measurable off the solid.
+
+`tests/test_conventions.py` enforces what a test can: every module in `parts/`
+is either load-bearing, with a drawing tool exposing a no-argument `draw()` and
+a committed figure in `docs/`, or declared decorative with a sentence saying what
+does not bear on it. A new part fails the suite until somebody decides which,
+because "I didn't think it carried anything" is the state both failures were
+written in. `CLAUDE.md` has the reasoning and the rules of thumb the two mistakes
+generalise into.
 
 ## Slicing
 
