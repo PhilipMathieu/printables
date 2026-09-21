@@ -95,6 +95,47 @@ A clip holds a band of stem diameters a couple of millimetres wide — from its
 mouth, the smallest stem that stays captive, up to its bore, the largest that
 fits. `--set` prints the four sizes that tile the range between them.
 
+### Desk switch box
+
+<img src="docs/desk_switch.png" alt="Desk switch box: both parts as printed, the section through the toggle with a finger in the gap, and the plan" width="100%">
+
+A box for a Gardner Bender GSW-117 toggle that screws to the underside of a
+sit-stand desk at its front edge, with a 5.5 × 2.1mm DC jack and a tied-down
+lead to a Greartisan 12V gearmotor out of the back. The bat throws up and
+down, because "up for up" is the one mapping that needs no label -- and that
+is what sets the box's height. Sending the desk down means a finger between
+the handle and the desk, so the toggle's axis sits a finger's thickness below
+the desktop plus however far the bat's tip rises when it is thrown, and the
+box is exactly as tall as it takes to get the switch body in under that.
+
+```sh
+python -m tools.desk_switch
+python -m tools.desk_switch --finger 25 --jack-hole 11.5
+python -m tools.desk_switch --switch gsw-123 --mirror
+```
+
+The switch is a 20 A heavy-duty toggle with a spring that fights back, and
+the box is built for it: the load is along the throw, in the plane of a 4mm
+front wall, and the box hangs off three flanges and four wood screws with a
+45° gusset under each so nothing can hinge. Print it with six wall loops so
+the plastic under the nut is solid rather than two skins over infill, and in
+ASA, because a nut torqued onto PLA has crept loose by the end of a summer.
+
+Two parts, no supports. The shell prints rim-down, so the flanges are the
+first layer; every hole in a wall is a teardrop with its point away from the
+plate and a 2mm flat across the tip that the nut and washer cover. The lid
+prints face-down with 45° countersinks, locates in the shell on a lip, and
+screws into the corner posts, so wiring never means unscrewing the box from
+the desk. The tests put the hardware in as solids -- bushing, body, nut, jack,
+a finger-thick cylinder lying along the desk -- and assert that nothing
+touches anything it should not.
+
+One thing to know before wiring: the GSW-117 is SPDT, (on)-off-(on), which can
+switch a motor on from either throw but cannot reverse it. Up *and* down from
+one bat wants the DPDT GSW-123, which is the same body in the same hole -- the
+box fits either -- wired as the usual reversing cross; the tool's docstring has
+it.
+
 ### Commemorative coin
 
 <img src="docs/tremblant_coin.png" alt="Coin: obverse, reverse and rim section" width="100%">
