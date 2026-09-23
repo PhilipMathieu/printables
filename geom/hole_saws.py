@@ -16,6 +16,15 @@ they are the numbers to check with calipers against the set in hand before
 printing. A pocket that came out loose rattles a little; one that
 came out tight does not take the saw at all.
 
+HOW THEY NEST. A smaller saw drops inside a bigger one's cup and stands on
+its back plate, so a nested saw adds only a back plate and a hub to the height
+of the stack, not a whole saw. Two numbers describe it: the smallest step in
+size that still drops in (``nest_step``), and how much prouder each saw in
+stands than the one it sits in (``rise``). Both are measured, on the set in
+hand: all eight nest, down to the 1/8 inch steps between 2, 2-1/8 and 2-1/4,
+and the 1 inch at the middle of the full stack stands about 1/2 inch proud of
+the 2-1/2 at the outside -- seven steps up.
+
 WHY THE MANDREL IS A STACK OF CYLINDERS. It is a thing of revolution lying on
 its side in a case, and what decides the cradle it lies in is its diameter at
 each point along it, in order: the hex shank the chuck grips, the flange whose
@@ -71,6 +80,10 @@ class HoleSawSet:
     saws: tuple[HoleSaw, ...]
     mandrel: tuple[Segment, ...]
     key: HexKey
+    nest_step: float
+    """Smallest difference in nominal size, in inches, that nests."""
+    rise: float
+    """How much prouder a nested saw's teeth stand than its host's, in mm."""
 
     @property
     def mandrel_length(self) -> float:
@@ -125,6 +138,9 @@ WARRIOR_57523 = HoleSawSet(
     mandrel=WARRIOR_MANDREL,
     # A small L-key for the pilot bit's set screw; size estimated, legs rounded up.
     key=HexKey(across=3.7, long=56.0, short=17.0),
+    # Measured: the whole set nests, eight deep, 1/2 inch proud in seven steps.
+    nest_step=1 / 8,
+    rise=0.5 * MM_PER_INCH / 7,
 )
 
 CATALOGUE = {s.name: s for s in (WARRIOR_57523,)}

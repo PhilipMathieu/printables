@@ -6,22 +6,25 @@ nothing in it knows that except the catalogue entry in ``geom.hole_saws``. Every
 dimension below follows from the pieces it holds, the clearances around them,
 and the fact that both halves print without support.
 
-WHY IT IS FLAT. The saws all cut the same 1 inch deep, so they are all the
-same height and none of them nests inside another: the bottom of every cup is a
-back plate with a hub on it. With nesting off the table the only thing left to
-save is floor area, and a one-layer case is as short as the tallest saw, which
-is the shortest a case of this set can be. Stood teeth-up, too, because the
-teeth are the one part of a saw that should touch nothing.
+WHY IT IS ONE STACK. The saws nest: each drops into the cup of the next size
+up and stands on its back plate, a couple of millimetres prouder than the one
+round it. All eight together stand half an inch taller than one saw on its own,
+in the floor space of the biggest. So the set is one pocket, not eight, and the
+case is barely taller than a case of flat saws while its footprint is set by
+the mandrel -- which is the longest thing in it and does not nest in anything.
+Stood teeth-up, because the teeth are the one part of a saw that should touch
+nothing. ``nest`` splits the set into shorter stacks, down to 1 for every saw
+in its own pocket, which trades floor for height.
 
 HOW THE POCKETS ARE LAID OUT. The mandrel lies along the front wall, half
-buried in a cradle turned to its own profile, and the key lies beside the pilot
-bit where the mandrel is thin. Then the saws are dropped in, largest first,
-each to the lowest place it fits and then the leftmost -- the classic
-bottom-left rule -- inside a tray of some width. Which width is the whole
-question, so ``layout`` tries every one in whole millimetres and keeps the
-smallest case. That is a greedy packing, not an optimal one: polished by a
-constrained optimiser it gives up about five percent more, which is not worth a
-solver as a dependency or a layout that moves when a clearance does.
+buried in a cradle turned to its own profile. Then the stacks are dropped in,
+largest first, each to the lowest place it fits and then the leftmost -- the
+classic bottom-left rule -- and the key goes wherever of its eight ways of
+lying lets it sit lowest, all inside a tray of some width. Which width is the
+whole question, so ``layout`` tries every one in whole millimetres and keeps
+the smallest case. That is a greedy packing, not an optimal one; with eight
+flat saws a constrained optimiser found about five percent more, which is not
+worth a solver as a dependency or a layout that moves when a clearance does.
 
 HOW IT STAYS SHUT. A hinge along the back on a length of 1.75mm filament, and a
 bead along the lid's front lip that clicks into a groove in the front wall. The
@@ -32,8 +35,8 @@ top half of its height and has a long span either side of the snap to bow
 over.
 
 WHY THE LID HAS NO LIP ALONG THE BACK. The hinge locates that edge already,
-and a lip there would swing down into the tray as the lid opens -- into the
-saws standing along the back wall.
+and a lip there would swing down into the tray as the lid opens -- into
+whatever is standing along the back wall.
 
 The lid is modelled closed, in place over the tray, because that is where the
 tests want it; ``lid_for_print`` turns it over onto its face for the plate.
@@ -60,6 +63,7 @@ from build123d import (
     Text,
     extrude,
 )
+from shapely import affinity
 from shapely.geometry import Point as _Point
 from shapely.geometry import box as _box
 from shapely.ops import unary_union
@@ -137,6 +141,10 @@ class Params:
     """Depth each saw's size is engraved into its pocket floor. 0 for none."""
     font: str = "DejaVu Sans"
 
+    nest: int = 8
+    """Most saws to a stack. The whole set nests, so the default is one
+    stack; 1 lays every saw out flat in its own pocket."""
+
     max_side: float = MAX_SIDE
 
     # ---- heights ----------------------------------------------------------
@@ -157,7 +165,7 @@ class Params:
     @property
     def rim(self) -> float:
         """Top of the walls, where the lid sits."""
-        tallest = max(self.kit.tallest, 2 * self.cradle_radius)
+        tallest = max(max(s.height for s in self.stacks), 2 * self.cradle_radius)
         return self.floor + tallest + self.headroom
 
     @property
@@ -184,11 +192,19 @@ class Params:
         """Behind the back wall's outside face."""
         return self.knuckle + self.hinge_gap
 
-    def pocket(self, saw: HoleSaw) -> float:
-        return saw.diameter + self.clearance
+    @property
+    def stacks(self) -> tuple[Stack, ...]:
+        """The saws, largest first, nested ``nest`` to a stack."""
+        saws = sorted(self.kit.saws, key=lambda s: -s.inches)
+        return tuple(Stack(tuple(saws[i:i + self.nest]), self.kit.rise)
+                     for i in range(0, len(saws), self.nest))
 
-    def push_hole(self, saw: HoleSaw) -> float:
-        return min(self.push, 0.45 * self.pocket(saw))
+    def pocket(self, stack: Stack) -> float:
+        """Only the outermost saw sits in the pocket; it holds the rest."""
+        return stack.outer.diameter + self.clearance
+
+    def push_hole(self, stack: Stack) -> float:
+        return min(self.push, 0.45 * self.pocket(stack))
 
     def validate(self) -> None:
         if self.web < MIN_WEB:
@@ -222,14 +238,44 @@ class Params:
             raise ValueError("the thumb notch is deeper than it is round")
         if self.label < 0 or self.label >= self.floor - 2 * 0.2:
             raise ValueError("labels engraved through the floor")
+        if self.nest < 1:
+            raise ValueError("a stack holds at least one saw")
+        for stack in self.stacks:
+            for big, small in zip(stack.saws, stack.saws[1:]):
+                if big.inches - small.inches < self.kit.nest_step - 1e-9:
+                    raise ValueError(
+                        f"a {small.nominal} saw does not nest in a {big.nominal}"
+                    )
 
 
 # ---- layout -----------------------------------------------------------------
 
 
 @dataclass(frozen=True)
+class Stack:
+    """Saws nested one inside the next, the largest outermost."""
+
+    saws: tuple[HoleSaw, ...]
+    rise: float
+
+    @property
+    def outer(self) -> HoleSaw:
+        return self.saws[0]
+
+    @property
+    def height(self) -> float:
+        """Floor to the highest tooth: each saw in stands ``rise`` prouder."""
+        return max(s.height + i * self.rise for i, s in enumerate(self.saws))
+
+    @property
+    def label(self) -> str:
+        small, big = (s.nominal.removesuffix(" in") for s in (self.saws[-1], self.saws[0]))
+        return f'{big}"' if len(self.saws) == 1 else f'{small}–{big}"'
+
+
+@dataclass(frozen=True)
 class Placed:
-    saw: HoleSaw
+    stack: Stack
     x: float
     y: float
 
@@ -241,11 +287,13 @@ class Layout:
 
     width: float
     depth: float
-    saws: tuple[Placed, ...]
+    stacks: tuple[Placed, ...]
     mandrel: tuple[float, float]
     """The mandrel's chuck end, on its axis."""
-    key: tuple[float, float]
-    """Outside corner of the key's bend."""
+    key_bars: tuple[tuple[float, float, float, float], ...]
+    """The key's two legs as (x0, y0, x1, y1), clearance in."""
+    key_scoop: tuple[float, float]
+    """Centre of the finger well at the end of the key's long leg."""
     reserved: object = field(repr=False, compare=False)
     """The mandrel's and key's footprints, as shapely geometry, clearances in."""
 
@@ -266,49 +314,106 @@ def _cradle_runs(params: Params) -> list[tuple[float, float, float]]:
     return [(max(0.0, a), b, r) for a, b, r in runs]
 
 
-def _key_origin(params: Params) -> tuple[float, float]:
-    """Beside the pilot bit, where the mandrel is thinnest and longest."""
-    runs = _cradle_runs(params)
-    pilot_start, _, pilot_r = runs[-1]
-    widest_before = max(b for a, b, r in runs[:-1])
-    x = max(pilot_start, widest_before) + params.web
-    y = params.cradle_radius + pilot_r + params.web
-    return x, y
-
-
-def _key_shapes(params: Params, x: float, y: float):
-    """The key's slot and its finger well, in plan. The long leg runs along x
-    from the bend at (x, y); the short leg stands up at the bend."""
-    k, c = params.kit.key, params.key_clearance
-    bar = k.across + 2 * c
-    long = _box(x, y, x + k.long + 2 * c, y + bar)
-    short = _box(x, y, x + bar, y + k.short + 2 * c)
-    scoop = _Point(x + k.long + 2 * c, y + bar / 2).buffer(params.key_scoop / 2, 64)
-    return long, short, scoop
-
-
-def _reserved(params: Params):
+def _cradle_plan(params: Params) -> list:
+    """The cradle in plan, as the convex rectangles it is made of."""
     y = params.cradle_radius
-    cradle = unary_union([_box(a, y - r, b, y + r) for a, b, r in _cradle_runs(params)])
-    return unary_union([cradle, *_key_shapes(params, *_key_origin(params))])
+    return [_box(a, y - r, b, y + r) for a, b, r in _cradle_runs(params)]
 
 
-def _lowest(region):
+Rounded = tuple[float, float, float, float, float]
+"""(x0, y0, x1, y1, r): a box grown by r. A point is a box of no size, so a
+circle is one too, and every piece of the key and every obstacle it has to miss
+is one of these."""
+
+
+def _shape(g: Rounded):
+    x0, y0, x1, y1, r = g
+    core = (_Point(x0, y0) if x0 == x1 and y0 == y1
+            else _box(x0, y0, x1, y1))
+    return core.buffer(r, 16) if r > 0 else core
+
+
+def _key_parts(params: Params, turn: int, flip: bool) -> list[Rounded]:
+    """The key's slot and finger well about the outside corner of its bend.
+    Unturned, the long leg runs along +x and the short one along +y; ``turn``
+    quarter turns and a ``flip`` -- the key laid on its other face -- give the
+    eight ways it can lie."""
+    k, c = params.kit.key, params.key_clearance
+    bar, long = k.across + 2 * c, k.long + 2 * c
+    parts = [(0, 0, long, bar, 0.0), (0, 0, bar, k.short + 2 * c, 0.0),
+             (long, bar / 2, long, bar / 2, params.key_scoop / 2)]
+    out = []
+    for x0, y0, x1, y1, r in parts:
+        corners = [(x0, y0), (x1, y1)]
+        if flip:
+            corners = [(x, -y) for x, y in corners]
+        for _ in range(turn):
+            corners = [(-y, x) for x, y in corners]
+        (ax, ay), (bx, by) = corners
+        out.append((min(ax, bx), min(ay, by), max(ax, bx), max(ay, by), r))
+    return out
+
+
+def _lowest(region, key=lambda p: (round(p[1], 3), p[0])):
     """Bottom-most, then left-most, vertex of a shapely region."""
     pts = []
     for poly in getattr(region, "geoms", [region]):
+        if poly.is_empty:
+            continue
         pts += list(poly.exterior.coords)
         for ring in poly.interiors:
             pts += list(ring.coords)
-    return min(pts, key=lambda p: (round(p[1], 3), p[0]))
+    return min(pts, key=key)
 
 
-def _drop(params: Params, width: float, reserved) -> tuple[tuple[Placed, ...], float] | None:
-    """Bottom-left fill of a tray ``width`` wide, largest saw first."""
-    taken, placed = [reserved], []
-    for saw in sorted(params.kit.saws, key=lambda s: -s.diameter):
-        r = params.pocket(saw) / 2
+def _place_key(params: Params, width: float, obstacles: list[Rounded]):
+    """The key, in whichever of its eight lies lets its top sit lowest.
+
+    Not a bottom-left drop of one point, because the key is not a circle: a
+    point p is free for it exactly when p is outside every obstacle grown by
+    the key's own shape turned backwards -- a Minkowski sum. Between two grown
+    boxes that sum is itself a grown box, the boxes added and the radii added,
+    so the free region is exact and cheap.
+    """
+    big = 10 * params.max_side
+    best = None
+    for turn in range(4):
+        for flip in (False, True):
+            parts = _key_parts(params, turn, flip)
+            room = _box(-big, -big, big, big)
+            for x0, y0, x1, y1, r in parts:
+                room = room.intersection(
+                    _box(r - x0, r - y0, width - x1 - r, big - y1))
+            if room.is_empty:
+                continue
+            blocked = unary_union([
+                _shape((ox0 - kx1, oy0 - ky1, ox1 - kx0, oy1 - ky0,
+                        orad + krad + params.web + 0.01))
+                for ox0, oy0, ox1, oy1, orad in obstacles
+                for kx0, ky0, kx1, ky1, krad in parts
+            ])
+            free = room.difference(blocked)
+            if free.is_empty:
+                continue
+            top = max(y1 + r for _, _, _, y1, r in parts)
+            x, y = _lowest(free, key=lambda p: (round(p[1] + top, 3), p[0]))
+            if best is None or (y + top, x) < best[0]:
+                best = ((y + top, x), [(x0 + x, y0 + y, x1 + x, y1 + y, r)
+                                       for x0, y0, x1, y1, r in parts])
+    return None if best is None else best[1]
+
+
+def _drop(params: Params, width: float):
+    """Bottom-left fill of a tray ``width`` wide: the stacks largest first,
+    each to the lowest place it fits and then the leftmost, then the key."""
+    cradle = _cradle_plan(params)
+    taken, placed = list(cradle), []
+    solid: list[Rounded] = [(*g.bounds, 0.0) for g in cradle]
+    for stack in sorted(params.stacks, key=lambda s: -s.outer.diameter):
+        r = params.pocket(stack) / 2
         room = _box(r, r, width - r, 10 * params.max_side)
+        if room.is_empty:
+            return None
         # A hair over the web: the buffers are polygons, and they cut inside
         # the circles they stand for.
         blocked = unary_union([g.buffer(r + params.web + 0.01, 48) for g in taken])
@@ -316,44 +421,58 @@ def _drop(params: Params, width: float, reserved) -> tuple[tuple[Placed, ...], f
         if free.is_empty:
             return None
         x, y = _lowest(free)
-        placed.append(Placed(saw, x, y))
+        placed.append(Placed(stack, x, y))
         taken.append(_Point(x, y).buffer(r, 48))
-    depth = unary_union(taken).bounds[3]
-    return tuple(placed), depth
+        solid.append((x, y, x, y, r))
+    key = _place_key(params, width, solid)
+    if key is None:
+        return None
+    return tuple(placed), cradle, [_shape(g) for g in key]
 
 
 @lru_cache(maxsize=None)
 def layout(params: Params) -> Layout:
-    """The smallest case the bottom-left rule finds, over every tray width."""
+    """The smallest case the bottom-left rule finds, over every tray width.
+
+    A width is skipped without packing it when even the shallowest tray it
+    could be is bigger than the best found: no shallower than the biggest
+    piece, and no smaller in area than the pieces themselves.
+    """
     params.validate()
-    reserved = _reserved(params)
     border = 2 * (params.margin + params.wall)
-    narrowest = math.ceil(reserved.bounds[2])
+    cradle = unary_union(_cradle_plan(params))
+    pockets = [params.pocket(s) for s in params.stacks]
+    shallowest = max([2 * params.cradle_radius] + pockets)
+    pieces = cradle.area + sum(math.pi * d * d / 4 for d in pockets)
+    narrowest = math.ceil(max(cradle.bounds[2], max(pockets)))
     best = None
     for width in range(narrowest, int(params.max_side - border) + 1):
-        dropped = _drop(params, float(width), reserved)
+        depth = max(shallowest, pieces / width)
+        if best is not None and (width + border) * (depth + border) >= best[0]:
+            continue
+        dropped = _drop(params, float(width))
         if dropped is None:
             continue
-        placed, depth = dropped
-        used = max(reserved.bounds[2], max(p.x + params.pocket(p.saw) / 2 for p in placed))
-        area = (used + border) * (depth + border)
-        if depth + border <= params.max_side and (best is None or area < best[0]):
-            best = (area, used, depth, placed)
+        placed, cradle, key = dropped
+        used = unary_union([*cradle, *key,
+                            *(_Point(p.x, p.y).buffer(params.pocket(p.stack) / 2, 48)
+                              for p in placed)]).bounds
+        area = (used[2] + border) * (used[3] + border)
+        if used[3] + border <= params.max_side and (best is None or area < best[0]):
+            best = (area, used, placed, cradle, key)
     if best is None:
         raise ValueError(f"{params.kit.name} does not fit a {params.max_side:.0f}mm plate")
-    _, used, depth, placed = best
+    _, used, placed, cradle, key = best
     m = params.margin
-    shift = lambda p: Placed(p.saw, p.x + m, p.y + m)  # noqa: E731
-    kx, ky = _key_origin(params)
-    from shapely import affinity
-
+    moved = [affinity.translate(g, m, m) for g in key]
     return Layout(
-        width=used + 2 * m,
-        depth=depth + 2 * m,
-        saws=tuple(shift(p) for p in placed),
+        width=used[2] + 2 * m,
+        depth=used[3] + 2 * m,
+        stacks=tuple(Placed(p.stack, p.x + m, p.y + m) for p in placed),
         mandrel=(m, m + params.cradle_radius),
-        key=(kx + m, ky + m),
-        reserved=affinity.translate(reserved, m, m),
+        key_bars=tuple(g.bounds for g in moved[:2]),
+        key_scoop=(moved[2].centroid.x, moved[2].centroid.y),
+        reserved=affinity.translate(unary_union([*cradle, *key]), m, m),
     )
 
 
@@ -369,27 +488,28 @@ def _plan(params: Params, grow: float = 0.0):
     )
 
 
-def _label(saw: HoleSaw) -> str:
-    return saw.nominal.removesuffix(" in") + '"'
-
-
 def _pocket_cuts(params: Params) -> Part:
     cuts = Part()
-    for p in layout(params).saws:
-        d = params.pocket(p.saw)
+    for p in layout(params).stacks:
+        d, hole = params.pocket(p.stack), params.push_hole(p.stack)
         cuts += Pos(p.x, p.y, params.floor) * Cylinder(
             d / 2, params.rim, align=(Align.CENTER, Align.CENTER, Align.MIN)
         )
         cuts += Pos(p.x, p.y, -1) * Cylinder(
-            params.push_hole(p.saw) / 2, params.floor + 2,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
+            hole / 2, params.floor + 2, align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
         if params.label > 0:
-            ring = (d - params.push_hole(p.saw)) / 2
+            ring = (d - hole) / 2
             size = min(6.0, 0.5 * ring)
-            y = p.y + (params.push_hole(p.saw) / 2 + d / 2) / 2
-            text = Text(_label(p.saw), font_size=size, font=params.font,
+            y = p.y + (hole / 2 + d / 2) / 2
+            text = Text(p.stack.label, font_size=size, font=params.font,
                         font_style=FontStyle.BOLD)
+            # Shrunk to the chord it sits on, if a long range would not fit.
+            chord = 2 * math.sqrt(max(0.0, (d / 2) ** 2 - (y - p.y + size / 2) ** 2))
+            wide = text.bounding_box().size.X
+            if wide > 0.85 * chord:
+                text = Text(p.stack.label, font_size=size * 0.85 * chord / wide,
+                            font=params.font, font_style=FontStyle.BOLD)
             cuts += extrude(
                 Plane.XY.offset(params.floor - params.label) * Pos(p.x, y) * text,
                 amount=params.label + 0.5,
@@ -398,28 +518,28 @@ def _pocket_cuts(params: Params) -> Part:
 
 
 def _cradle(params: Params) -> Part:
-    lay = layout(params)
-    x0, y = lay.mandrel
+    x0, y = layout(params).mandrel
     cut = Part()
     for a, b, r in _cradle_runs(params):
         cut += Pos(x0 + a + (b - a) / 2, y, params.seat) * Rot(0, 90, 0) \
             * Cylinder(r, b - a)
-    # The cradle's ends run to the tray's top: the chuck end is where it is
-    # lifted from, so there is no lip of tray to catch the shank on.
     return cut
 
 
+def key_depth(params: Params) -> float:
+    """How far the key's slot goes down from the top of the tray."""
+    return params.kit.key.across + params.key_clearance + 0.4
+
+
 def _key_slot(params: Params) -> Part:
-    x, y = layout(params).key
-    long, short, scoop = _key_shapes(params, x, y)
-    depth = params.kit.key.across + params.key_clearance + 0.4
+    lay = layout(params)
+    depth = key_depth(params)
     cut = Part()
-    for g in (long, short):
-        a, b, c, d = g.bounds
+    for a, b, c, d in lay.key_bars:
         cut += Pos((a + c) / 2, (b + d) / 2, params.seat - depth) * Box(
             c - a, d - b, depth + 1, align=(Align.CENTER, Align.CENTER, Align.MIN)
         )
-    cx, cy = scoop.centroid.x, scoop.centroid.y
+    cx, cy = lay.key_scoop
     cut += Pos(cx, cy, params.seat - depth - 1) * Cylinder(
         params.key_scoop / 2, depth + 2, align=(Align.CENTER, Align.CENTER, Align.MIN)
     )

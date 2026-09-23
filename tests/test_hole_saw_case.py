@@ -5,23 +5,30 @@ of the set goes into its place and nothing of the case is in the way of it,
 that the lid closes over them and swings open again without touching either
 the tray or a saw, that the snap actually catches, and that both halves print
 without support. Each is measured off the built solids, with the set stood in
-them as plain cylinders the size the catalogue says they are.
+them as plain shapes the size the catalogue says they are -- the nested stack
+as one cylinder, as wide as its outer saw and as tall as its innermost stands.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import math
 
 import numpy as np
 import pytest
 from build123d import Align, Box, Cylinder, Part, Pos, Rot
+from shapely import affinity
+from shapely.geometry import Point, box
+from shapely.ops import unary_union
 
 from geom.hole_saws import MM_PER_INCH, WARRIOR_57523
 from parts.hole_saw_case import (
     MAX_SIDE,
     Params,
+    _cradle_plan,
     _cradle_runs,
+    key_depth,
     _snap_runs,
     _snap_z,
     hinge_axis,
@@ -55,13 +62,13 @@ def top(params):
 
 @pytest.fixture(scope="module")
 def contents(params):
-    """The set, in its places: saws standing on the pocket floors, the mandrel
+    """The set, in its places: the stack on its pocket floor, the mandrel
     lying in its cradle, the key in its slot."""
     lay = layout(params)
     pieces = Part()
-    for p in lay.saws:
+    for p in lay.stacks:
         pieces += Pos(p.x, p.y, params.floor) * Cylinder(
-            p.saw.diameter / 2, p.saw.height,
+            p.stack.outer.diameter / 2, p.stack.height,
             align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
     x, y = lay.mandrel
@@ -72,15 +79,13 @@ def contents(params):
             seg.diameter / 2, seg.length
         )
         along += seg.length
-    kx, ky = lay.key
-    k, c = params.kit.key, params.key_clearance
-    depth = params.seat - k.across - c - 0.4
-    pieces += Pos(kx + c, ky + c, depth) * Box(
-        k.long, k.across, k.across, align=(Align.MIN, Align.MIN, Align.MIN)
-    )
-    pieces += Pos(kx + c, ky + c, depth) * Box(
-        k.across, k.short, k.across, align=(Align.MIN, Align.MIN, Align.MIN)
-    )
+    c, across = params.key_clearance, params.kit.key.across
+    bottom = params.seat - key_depth(params)
+    for x0, y0, x1, y1 in lay.key_bars:
+        pieces += Pos(x0 + c, y0 + c, bottom) * Box(
+            x1 - x0 - 2 * c, y1 - y0 - 2 * c, across,
+            align=(Align.MIN, Align.MIN, Align.MIN),
+        )
     return pieces
 
 
@@ -96,46 +101,101 @@ def test_the_set_is_the_one_on_the_shelf():
         assert saw.diameter >= saw.inches * MM_PER_INCH
 
 
-def test_every_piece_has_a_place(params):
-    lay = layout(params)
-    assert sorted(p.saw.nominal for p in lay.saws) == sorted(
-        s.nominal for s in params.kit.saws
+def test_every_saw_has_a_place(params):
+    placed = [saw.nominal for p in layout(params).stacks for saw in p.stack.saws]
+    assert sorted(placed) == sorted(s.nominal for s in params.kit.saws)
+
+
+# --- they nest ---------------------------------------------------------------
+
+
+def test_the_whole_set_is_one_stack_half_an_inch_proud(params):
+    """Measured on the set: all eight nest, and the 1 inch in the middle
+    stands about half an inch proud of the 2-1/2 round the outside."""
+    (only,) = layout(params).stacks
+    assert [s.inches for s in only.stack.saws] == [
+        2.5, 2.25, 2.125, 2, 1.75, 1.5, 1.25, 1
+    ]
+    assert only.stack.height == pytest.approx(
+        params.kit.tallest + 0.5 * MM_PER_INCH
     )
+
+
+@pytest.mark.parametrize("nest", [1, 2, 3, 4, 8])
+def test_every_saw_nests_in_the_one_round_it(nest):
+    params = Params(nest=nest)
+    for stack in params.stacks:
+        assert len(stack.saws) <= nest
+        for big, small in zip(stack.saws, stack.saws[1:]):
+            assert big.inches - small.inches >= params.kit.nest_step - 1e-9
+
+
+def test_validate_refuses_a_nest_the_set_does_not_make():
+    kit = dataclasses.replace(WARRIOR_57523, nest_step=0.25)
+    with pytest.raises(ValueError, match="does not nest"):
+        Params(kit=kit).validate()
+
+
+def test_nesting_is_what_makes_it_compact(params):
+    """One stack against every saw in its own pocket: under two thirds the
+    volume, for at most the half inch the stack stands proud -- less, since
+    the mandrel already stands taller than a single saw."""
+    flat = Params(nest=1)
+
+    def volume(p):
+        lay = layout(p)
+        return (lay.width + 2 * p.wall) * (lay.depth + 2 * p.wall) * p.height
+
+    assert volume(params) < 0.65 * volume(flat)
+    assert params.height - flat.height <= 0.5 * MM_PER_INCH + 1e-6
 
 
 # --- everything goes in ----------------------------------------------------
 
 
-def test_the_pockets_never_run_into_one_another(params):
+@pytest.mark.parametrize("nest", [8, 2, 1])
+def test_the_pockets_never_run_into_one_another(nest):
     """At least one web of plastic between any two pockets, and between any
     pocket and the mandrel's cradle or the key's slot."""
+    params = Params(nest=nest)
     lay = layout(params)
-    for a, b in itertools.combinations(lay.saws, 2):
+    for a, b in itertools.combinations(lay.stacks, 2):
         gap = math.dist((a.x, a.y), (b.x, b.y)) - (
-            params.pocket(a.saw) + params.pocket(b.saw)
+            params.pocket(a.stack) + params.pocket(b.stack)
         ) / 2
-        assert gap >= params.web - 1e-6, (a.saw.nominal, b.saw.nominal)
-    from shapely.geometry import Point
+        assert gap >= params.web - 1e-6, (a.stack.label, b.stack.label)
+    for p in lay.stacks:
+        gap = Point(p.x, p.y).distance(lay.reserved) - params.pocket(p.stack) / 2
+        assert gap >= params.web - 0.05, p.stack.label
 
-    for p in lay.saws:
-        gap = Point(p.x, p.y).distance(lay.reserved) - params.pocket(p.saw) / 2
-        assert gap >= params.web - 0.05, p.saw.nominal
+
+@pytest.mark.parametrize("nest", [8, 2, 1])
+def test_the_key_keeps_clear_of_the_cradle_and_the_walls(nest):
+    params = Params(nest=nest)
+    lay = layout(params)
+    cradle = affinity.translate(unary_union(_cradle_plan(params)),
+                                params.margin, params.margin)
+    inside = box(params.margin, params.margin, lay.width - params.margin,
+                 lay.depth - params.margin)
+    scoop = Point(lay.key_scoop).buffer(params.key_scoop / 2)
+    for g in (*(box(*bar) for bar in lay.key_bars), scoop):
+        assert g.distance(cradle) >= params.web - 0.05
+        assert inside.buffer(0.05).contains(g)
 
 
 def test_the_set_goes_in_without_touching_the_case(bottom, contents):
     assert (bottom & contents).volume < TOUCH
 
 
-def test_every_saw_stands_on_its_pocket_floor(params, bottom):
-    """The pocket's own floor, not the tray's top: each saw sinks in to its
-    full depth, and so is held by the whole of it."""
-    for p in layout(params).saws:
-        probe = Pos(p.x + params.pocket(p.saw) / 2 - 1.5, p.y, params.floor - 0.1) \
-            * Box(0.4, 0.4, 0.2)
-        assert (bottom & probe).volume > 0, p.saw.nominal
-        above = Pos(p.x + params.pocket(p.saw) / 2 - 1.5, p.y, params.floor + 0.2) \
-            * Box(0.4, 0.4, 0.2)
-        assert (bottom & above).volume < TOUCH, p.saw.nominal
+def test_the_stack_stands_on_its_pocket_floor(params, bottom):
+    """The pocket's own floor, not the tray's top: the outer saw sinks in to
+    its full depth, and so is held by the whole of it."""
+    for p in layout(params).stacks:
+        edge = p.x + params.pocket(p.stack) / 2 - 1.5
+        probe = Pos(edge, p.y, params.floor - 0.1) * Box(0.4, 0.4, 0.2)
+        assert (bottom & probe).volume > 0, p.stack.label
+        above = Pos(edge, p.y, params.floor + 0.2) * Box(0.4, 0.4, 0.2)
+        assert (bottom & above).volume < TOUCH, p.stack.label
 
 
 def test_the_mandrel_lies_half_buried(params, bottom):
@@ -169,7 +229,7 @@ def test_the_lid_sits_on_the_rim(params, bottom, top):
 @pytest.mark.parametrize("degrees", [15, 45, 75, 105, 135, 165, 180])
 def test_the_lid_swings_clear(params, bottom, top, contents, degrees):
     """All the way over and flat behind, touching neither the tray nor the
-    saws on the way."""
+    stack on the way."""
     swung = opened(params, degrees, top)
     assert (swung & bottom).volume < TOUCH
     assert (swung & contents).volume < TOUCH
@@ -248,24 +308,15 @@ def test_each_half_fits_the_plate(params, bottom, top):
 
 
 def test_the_case_is_as_short_as_the_set_allows(params, bottom, top):
-    """The tallest piece, a floor under it, headroom over it and a lid: the
-    closed case is that and not a millimetre more, knuckles included."""
+    """The tallest piece -- the nested stack -- with a floor under it,
+    headroom over it and a lid: the closed case is that and not a millimetre
+    more, knuckles included."""
     closed = (bottom + top).bounding_box()
-    tallest = max(params.kit.tallest, params.kit.mandrel_diameter
-                  + 2 * params.mandrel_clearance)
+    tallest = max([s.height for s in params.stacks]
+                  + [params.kit.mandrel_diameter + 2 * params.mandrel_clearance])
     assert closed.size.Z == pytest.approx(
         params.floor + tallest + params.headroom + params.lid, abs=1e-3
     )
-
-
-def test_the_packing_leaves_no_row_of_air(params):
-    """The pieces, in plan, cover well over half the tray: about 64 percent.
-    Four by two equal cells sized to the biggest saw, with the mandrel along
-    the front, covers 39 -- and at 264mm wide does not fit the plate at all."""
-    lay = layout(params)
-    pieces = sum(math.pi * params.pocket(p.saw) ** 2 / 4 for p in lay.saws)
-    pieces += lay.reserved.area
-    assert pieces / (lay.width * lay.depth) > 0.6
 
 
 def test_validate_refuses_an_even_hinge():

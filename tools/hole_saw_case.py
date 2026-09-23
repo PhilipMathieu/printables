@@ -2,6 +2,7 @@
 
     python -m tools.hole_saw_case
     python -m tools.hole_saw_case --saw-height 30.5 --mandrel 36x11.5,16x31,14x16.5,40x6.8
+    python -m tools.hole_saw_case --nest 4      # two stacks of four, 7mm lower
 
 The numbers worth a pair of calipers before the first print are the soft ones
 in ``geom.hole_saws``: how tall the saws are from hub to teeth, and the
@@ -14,6 +15,10 @@ its face, so its lip and hinge knuckles point up. PLA is fine -- this lives in
 a drawer. After printing, cut a piece of 1.75mm filament to the length the
 command prints, straighten it, and push it through the knuckles from one end;
 it grips in the tray's and turns in the lid's.
+
+The whole set nests, so by default it goes in as one stack in one pocket;
+``--nest`` splits it into shorter stacks, down to 1 for every saw in its own
+pocket, trading floor for height.
 
 The preview is three views: the case open with the lid swung back, the layout
 that is actually the design, and the hinge in section with the lid drawn at
@@ -96,18 +101,21 @@ def _layout_view(ax, params: Params) -> None:
                                 boxstyle=f"round,pad={g}", facecolor=ASA,
                                 edgecolor=INK, lw=1.2, alpha=0.35, zorder=1))
     _outline(ax, lay.reserved, facecolor="white", edgecolor=MANDREL, lw=1.1, zorder=2)
-    for p in lay.saws:
-        ax.add_patch(CirclePatch((p.x, p.y), params.pocket(p.saw) / 2,
+    for p in lay.stacks:
+        ax.add_patch(CirclePatch((p.x, p.y), params.pocket(p.stack) / 2,
                                  facecolor="white", edgecolor=INK, lw=1.0, zorder=2))
-        ax.add_patch(CirclePatch((p.x, p.y), p.saw.diameter / 2, facecolor=STEEL,
-                                 alpha=0.25, edgecolor=STEEL, lw=0.8, zorder=3))
-        ax.text(p.x, p.y, p.saw.nominal.removesuffix(" in") + '"', ha="center",
-                va="center", fontsize=8.5, color=INK, zorder=4)
+        # Every saw in the stack, one inside the next, as they sit.
+        for saw in p.stack.saws:
+            ax.add_patch(CirclePatch((p.x, p.y), saw.diameter / 2, facecolor=STEEL,
+                                     alpha=0.12, edgecolor=STEEL, lw=0.8, zorder=3))
+        ax.text(p.x, p.y, p.stack.label, ha="center", va="center", fontsize=8.5,
+                color=INK, zorder=4)
     x, y = lay.mandrel
     ax.text(x + 6, y, "mandrel", fontsize=8, color=MANDREL, va="center", zorder=4)
-    kx, ky = lay.key
-    ax.text(kx + params.kit.key.long / 2, ky + 9, "key", fontsize=8, color=MANDREL,
-            ha="center", va="center", zorder=4)
+    (a, b, c, d), _ = lay.key_bars
+    ax.text((a + c) / 2, (b + d) / 2, "key", fontsize=8, color=MANDREL,
+            ha="center", va="center", zorder=4,
+            rotation=90 if d - b > c - a else 0)
     ax.annotate(
         f"{lay.width + 2 * w:.0f} × {lay.depth + 2 * w:.0f} mm, "
         f"{params.height:.0f} mm tall closed",
@@ -117,7 +125,8 @@ def _layout_view(ax, params: Params) -> None:
     ax.set_ylim(-w - 14, lay.depth + w + 14)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_title("the layout: every piece dropped to the lowest place it fits",
+    nested = max(len(p.stack.saws) for p in lay.stacks)
+    ax.set_title(f"the layout: {len(params.kit.saws)} saws, nested {nested} deep",
                  color=INK, fontsize=11)
 
 
@@ -193,8 +202,10 @@ def params_from(args: argparse.Namespace) -> Params:
             dataclasses.replace(s, height=args.saw_height) for s in kit.saws))
     if args.mandrel:
         kit = dataclasses.replace(kit, mandrel=_mandrel(args.mandrel))
-    return Params(kit=kit, clearance=args.clearance, web=args.web, wall=args.wall,
-                  snap=args.snap, label=args.label)
+    if args.rise is not None:
+        kit = dataclasses.replace(kit, rise=args.rise)
+    return Params(kit=kit, nest=args.nest, clearance=args.clearance, web=args.web,
+                  wall=args.wall, snap=args.snap, label=args.label)
 
 
 def _write(part: Part, base: Path, args) -> None:
@@ -221,6 +232,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mandrel", default=None,
                     help="the mandrel as LENGTHxDIAMETER segments, chuck end first, "
                          "hexes across the corners")
+    ap.add_argument("--nest", type=int, default=Params.nest,
+                    help="most saws nested in one stack; 1 lays them all out flat")
+    ap.add_argument("--rise", type=float, default=None,
+                    help="how much prouder each nested saw stands than the one it "
+                         "sits in, in mm")
     ap.add_argument("--clearance", type=float, default=Params.clearance,
                     help="added to each saw's diameter for its pocket")
     ap.add_argument("--web", type=float, default=Params.web,
@@ -249,8 +265,9 @@ def main(argv: list[str] | None = None) -> int:
     lay = layout(params)
     print(f"{lay.width + 2 * params.wall:.0f} × {lay.depth + 2 * params.wall:.0f} × "
           f"{params.height:.1f} mm closed, {params.kit.pieces} pieces")
-    for p in sorted(lay.saws, key=lambda p: p.saw.inches):
-        print(f"  {p.saw.nominal:>9}: {params.pocket(p.saw):.1f} mm pocket")
+    for p in lay.stacks:
+        print(f"  {p.stack.label:>10}: {len(p.stack.saws)} nested, "
+              f"{p.stack.height:.1f} mm tall, {params.pocket(p.stack):.1f} mm pocket")
     print(f"hinge pin: {pin_length(params):.0f} mm of {params.pin} mm filament")
     for name, part in (("tray", bottom), ("lid", top)):
         print(f"{name}: valid={part.is_valid}, {part.volume / 1000:.0f} cm^3")
