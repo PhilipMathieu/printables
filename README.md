@@ -15,6 +15,43 @@ funnel never once widens on the way down.
 
 ## What's in it
 
+### Hole saw case
+
+<img src="docs/hole_saw_case.png" alt="Hole saw case: open, the pocket layout, and the hinge in section with the lid through its swing" width="100%">
+
+A tray and a hinged lid for Harbor Freight's Warrior 57523 set: eight carbon
+steel saws from 1 to 2-1/2 inches, the large mandrel with its pilot bit, and
+the hex key. 202 x 138 x 38mm closed. Every saw stands teeth-up in its own
+pocket with its size engraved in the floor and a hole under it to push it out
+from below; the mandrel lies half buried in a cradle turned to its profile,
+dug out either side of the flange for a finger and thumb; the key lies beside
+the pilot bit, where the mandrel is thin.
+
+```sh
+python -m tools.hole_saw_case
+python -m tools.hole_saw_case --saw-height 30.5 --mandrel 36x11.5,16x31,14x16.5,40x6.8
+```
+
+It is flat because it cannot usefully be anything else. The saws all cut an
+inch deep, so they are all one height and none nests in another, and a
+one-layer case is exactly as tall as the tallest piece. What is left to save is
+floor, so the layout is a packing: the mandrel along the front, then the saws
+dropped in largest first, each to the lowest place it fits and then the
+leftmost, in a tray of every width in whole millimetres, keeping the smallest
+case. The pieces cover 64 percent of the floor. Four by two equal cells would
+cover 39, and would not fit the plate.
+
+The lid turns on a length of 1.75mm filament, a press fit in the tray's
+knuckles and free in the lid's, and clicks shut on a bead that the front wall
+bows to let past. It has no lip along the back, because the hinge already
+locates that edge and a lip there would swing down into the saws. The tests
+swing it through 180 degrees with the set in place and check it touches
+nothing on the way.
+
+Only the saw sizes and the cut depth are published. The saws' height, the
+mandrel and the key are estimates, rounded the way that fails loose, and are
+the numbers to check with calipers before the first print -- both have flags.
+
 ### Poop bag holder
 
 <img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">
@@ -126,7 +163,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip and lead webbing catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and hole saw catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
