@@ -25,6 +25,7 @@ from shapely.ops import unary_union
 from geom.hole_saws import MM_PER_INCH, WARRIOR_57523
 from parts.hole_saw_case import (
     MAX_SIDE,
+    STEEL_PIN,
     Params,
     _cradle_plan,
     _cradle_runs,
@@ -244,12 +245,7 @@ def test_the_snap_catches(params, top):
         assert reach == pytest.approx(-params.snap, abs=0.02)
 
 
-def test_the_hinge_pin_is_held_by_the_tray_and_turns_in_the_lid(params, bottom, top):
-    """The tray's bores are a tenth over the filament and the lid's are four:
-    printed holes usually come out a tenth or two undersize, which makes the
-    first a press fit and leaves the second running free. Probed with a
-    cylinder a hair over each bore -- it touches that half, and a cylinder of
-    the tray's bore does not touch the lid at all."""
+def _check_pin_bores(params, bottom, top):
     ya, za = hinge_axis(params)
     span = pin_length(params)
     x0 = layout(params).width / 2
@@ -257,13 +253,41 @@ def test_the_hinge_pin_is_held_by_the_tray_and_turns_in_the_lid(params, bottom, 
     def rod(diameter):
         return Pos(x0, ya, za) * Rot(0, 90, 0) * Cylinder(diameter / 2, span)
 
-    held = params.pin + params.pin_press
-    free = params.pin + params.pin_play
+    held = params.pin.diameter + params.pin.press
+    free = params.pin.diameter + params.pin.play
     assert (bottom & rod(held - 0.04)).volume < TOUCH
     assert (bottom & rod(held + 0.04)).volume > 0
     assert (top & rod(held + 0.04)).volume < TOUCH
     assert (top & rod(free - 0.04)).volume < TOUCH
     assert (top & rod(free + 0.04)).volume > 0
+
+
+def test_the_hinge_pin_is_held_by_the_tray_and_turns_in_the_lid(params, bottom, top):
+    """The tray's bores are a tenth over the filament and the lid's are four:
+    printed holes usually come out a tenth or two undersize, which makes the
+    first a press fit and leaves the second running free. Probed with a
+    cylinder a hair over each bore -- it touches that half, and a cylinder of
+    the tray's bore does not touch the lid at all."""
+    _check_pin_bores(params, bottom, top)
+
+
+def test_a_steel_pin_is_bored_for_and_moves_nothing_else(params):
+    """The steel upgrade changes the bores and nothing else: same hinge line,
+    same case, and the bores fit the rod the same way they fit filament."""
+    steel = dataclasses.replace(params, pin=STEEL_PIN)
+    assert hinge_axis(steel) == hinge_axis(params)
+    assert steel.height == params.height
+    assert layout(steel) == layout(params)
+    _check_pin_bores(steel, tray(steel), lid(steel))
+
+
+def test_validate_refuses_a_pin_the_lid_would_grip(params):
+    tight = dataclasses.replace(STEEL_PIN, play=STEEL_PIN.press)
+    with pytest.raises(ValueError, match="grip"):
+        dataclasses.replace(params, pin=tight).validate()
+    fat = dataclasses.replace(STEEL_PIN, diameter=5.0)
+    with pytest.raises(ValueError, match="knuckle"):
+        dataclasses.replace(params, pin=fat).validate()
 
 
 # --- it prints ---------------------------------------------------------------
@@ -287,7 +311,7 @@ def _overhangs(solid, bores: list[tuple[float, float, float]] = ()) -> np.ndarra
 
 def test_the_tray_prints_without_support(params, bottom):
     ya, za = hinge_axis(params)
-    bore = (ya, za, (params.pin + params.pin_press) / 2)
+    bore = (ya, za, (params.pin.diameter + params.pin.press) / 2)
     assert len(_overhangs(bottom, [bore])) == 0
 
 
@@ -295,7 +319,7 @@ def test_the_lid_prints_face_down_without_support(params, top):
     ya, za = hinge_axis(params)
     # Turned over about the x axis and dropped onto the plate, which moves the
     # bore to (-ya, height - za).
-    bore = (-ya, params.height - za, (params.pin + params.pin_play) / 2)
+    bore = (-ya, params.height - za, (params.pin.diameter + params.pin.play) / 2)
     flipped = lid_for_print(params, top)
     assert flipped.bounding_box().min.Z == pytest.approx(0, abs=1e-6)
     assert len(_overhangs(flipped, [bore])) == 0

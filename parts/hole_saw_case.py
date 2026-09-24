@@ -29,7 +29,9 @@ worth a solver as a dependency or a layout that moves when a clearance does.
 HOW IT STAYS SHUT. A hinge along the back on a length of 1.75mm filament, and a
 bead along the lid's front lip that clicks into a groove in the front wall. The
 pin is a press fit in the tray's knuckles and runs free in the lid's, so it
-cannot walk out and the lid still swings. The bead is small because it is the
+cannot walk out and the lid still swings. ``STEEL_PIN`` swaps the filament for
+2mm steel rod, which does not creep, wear or bend, for a case that gets thrown
+in a truck; nothing changes but the bores. The bead is small because it is the
 tray's wall that gives, not the lip: the wall stands clear of the tray for the
 top half of its height and has a long span either side of the snap to bow
 over.
@@ -82,6 +84,30 @@ printed one at a time, so each has the whole plate to itself."""
 
 
 @dataclass(frozen=True)
+class Pin:
+    """What the hinge turns on, and what is added to it for each half's bores.
+
+    Printed holes come out a tenth or two undersize, so a bore a little over
+    the pin grips it and one well over lets it turn.
+    """
+
+    name: str
+    diameter: float
+    press: float
+    """Added to the pin for the tray's knuckles, which hold it."""
+    play: float
+    """Added to the pin for the lid's, which turn on it."""
+
+
+FILAMENT_PIN = Pin("1.75mm filament", 1.75, 0.1, 0.4)
+STEEL_PIN = Pin("2mm steel rod", 2.0, 0.15, 0.4)
+"""5/64in music wire or a 2mm drill blank, cut to length. Filament gives a
+little as it is pushed in and steel gives nothing, so the tray's knuckles get
+an extra twentieth to keep the press from splitting them."""
+PINS = {"filament": FILAMENT_PIN, "steel": STEEL_PIN}
+
+
+@dataclass(frozen=True)
 class Params:
     kit: HoleSawSet = WARRIOR_57523
 
@@ -115,12 +141,8 @@ class Params:
     """Radius of the thumb notch in the front wall's top edge."""
     notch_depth: float = 4.0
 
-    pin: float = 1.75
-    """The hinge pin: a length of filament."""
-    pin_press: float = 0.1
-    """Added to the pin for the tray's knuckles, which hold it."""
-    pin_play: float = 0.4
-    """Added to the pin for the lid's, which turn on it."""
+    pin: Pin = FILAMENT_PIN
+    """The hinge pin: a length of filament, or ``STEEL_PIN``."""
     knuckle: float = 4.0
     """Radius of the hinge knuckles."""
     knuckles: int = 5
@@ -221,7 +243,11 @@ class Params:
             raise ValueError("the snap groove would cut through the front wall")
         if self.snap_play < 0 or self.snap <= 0:
             raise ValueError("a bead that stands in nothing is not a snap")
-        hole = self.pin + max(self.pin_press, self.pin_play)
+        if self.pin.diameter <= 0 or self.pin.press < 0:
+            raise ValueError("a pin needs a diameter and a bore at least its size")
+        if self.pin.play <= self.pin.press:
+            raise ValueError("the lid's knuckles would grip the pin as hard as the tray's")
+        hole = self.pin.diameter + self.pin.play
         if self.knuckle - hole / 2 < 2 * MIN_WEB:
             raise ValueError(
                 f"a {self.knuckle}mm knuckle leaves too little round a "
@@ -608,7 +634,7 @@ def _knuckle(params: Params, start: float, end: float, tray: bool) -> Part:
         body = ring
         for sk in (drop, gusset):
             body += _along_x(sk, start, end)
-        hole = params.pin + params.pin_press
+        hole = params.pin.diameter + params.pin.press
     else:
         # Printed face down, so its teardrop points at the lid's top face, and
         # a bridge ties it back to the lid over the tray's wall.
@@ -619,7 +645,7 @@ def _knuckle(params: Params, start: float, end: float, tray: bool) -> Part:
         body = ring
         for sk in (peak, bridge):
             body += _along_x(sk, start, end)
-        hole = params.pin + params.pin_play
+        hole = params.pin.diameter + params.pin.play
     body = body & Pos(0, 0, params.height / 2) * Box(
         10 * params.max_side, 10 * params.max_side, params.height
     )

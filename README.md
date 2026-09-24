@@ -30,6 +30,7 @@ in a slot with a finger well at its end.
 ```sh
 python -m tools.hole_saw_case
 python -m tools.hole_saw_case --nest 4      # two stacks of four, 7mm lower
+python -m tools.hole_saw_case --pin steel   # bored for 2mm steel rod
 python -m tools.hole_saw_case --saw-height 30.5 --mandrel 36x11.5,16x31,14x16.5,40x6.8
 ```
 
@@ -50,10 +51,14 @@ stacks, down to one saw a pocket, trading floor for height.
 
 The lid turns on a length of 1.75mm filament, a press fit in the tray's
 knuckles and free in the lid's, and clicks shut on a bead that the front wall
-bows to let past. It has no lip along the back, because the hinge already
-locates that edge and a lip there would swing down into the tray. The tests
-swing it through 180 degrees with the set in place and check it touches
-nothing on the way.
+bows to let past. `--pin steel` bores the knuckles for 2mm steel rod instead
+(5/64in music wire or a drill blank, cut to 57mm and tapped home), which won't
+creep, wear or bend in a case that gets thrown around; the tray's bores get an
+extra 0.05mm, because steel gives nothing as it goes in and the knuckles have
+to take all of the press. `--pin 2.4` takes any other rod. It has no lip along
+the back, because the hinge already locates that edge and a lip there would
+swing down into the tray. The tests swing it through 180 degrees with the set
+in place and check it touches nothing on the way.
 
 Only the saw sizes and the cut depth are published, and the nesting was
 checked by hand. The saws' height, the mandrel and the key are estimates,

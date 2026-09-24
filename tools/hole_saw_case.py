@@ -14,7 +14,10 @@ Two halves, one plate each: the tray prints floor down and the lid prints on
 its face, so its lip and hinge knuckles point up. PLA is fine -- this lives in
 a drawer. After printing, cut a piece of 1.75mm filament to the length the
 command prints, straighten it, and push it through the knuckles from one end;
-it grips in the tray's and turns in the lid's.
+it grips in the tray's and turns in the lid's. ``--pin steel`` bores the
+knuckles for 2mm steel rod instead -- 5/64in music wire or a drill blank, cut
+to length, deburred, and tapped home -- and ``--pin 2.4`` for any other rod
+you have, with the steel fits.
 
 The whole set nests, so by default it goes in as one stack in one pocket;
 ``--nest`` splits it into shorter stacks, down to 1 for every saw in its own
@@ -49,7 +52,10 @@ from build123d import Part, export_stl  # noqa: E402
 from geom import hole_saws  # noqa: E402
 from p2s import inventory, profiles  # noqa: E402
 from parts.hole_saw_case import (  # noqa: E402
+    PINS,
+    STEEL_PIN,
     Params,
+    Pin,
     hinge_axis,
     layout,
     lid,
@@ -149,7 +155,7 @@ def _hinge_view(ax, params: Params, bottom: Part, top: Part) -> None:
             segs[:, :, 1:], colors=[MANDREL], lw=1.3 if degrees in (0, 180) else 0.7,
             alpha=1 if degrees in (0, 180) else 0.55, zorder=4))
     ax.plot([ya], [za], "o", color=INK, ms=3, zorder=5)
-    ax.annotate(f"{params.pin} mm filament pin", xy=(ya, za), xytext=(ya + 8, za - 16),
+    ax.annotate(f"{params.pin.name} pin", xy=(ya, za), xytext=(ya + 8, za - 16),
                 fontsize=8.5, color=INK,
                 arrowprops=dict(arrowstyle="->", color=INK, lw=0.9))
     ax.set_xlim(lay.depth - 40, ya + 45)
@@ -195,6 +201,18 @@ def _mandrel(spec: str) -> tuple[hole_saws.Segment, ...]:
     return tuple(out)
 
 
+def _pin(spec: str) -> Pin:
+    """'filament', 'steel', or a steel rod's diameter in mm."""
+    if spec in PINS:
+        return PINS[spec]
+    try:
+        diameter = float(spec)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"{spec!r}: {', '.join(PINS)} or a rod's diameter in mm") from None
+    return dataclasses.replace(STEEL_PIN, name=f"{diameter:g}mm rod", diameter=diameter)
+
+
 def params_from(args: argparse.Namespace) -> Params:
     kit = hole_saws.named(args.kit)
     if args.saw_height is not None:
@@ -205,7 +223,7 @@ def params_from(args: argparse.Namespace) -> Params:
     if args.rise is not None:
         kit = dataclasses.replace(kit, rise=args.rise)
     return Params(kit=kit, nest=args.nest, clearance=args.clearance, web=args.web,
-                  wall=args.wall, snap=args.snap, label=args.label)
+                  wall=args.wall, snap=args.snap, label=args.label, pin=args.pin)
 
 
 def _write(part: Part, base: Path, args) -> None:
@@ -244,6 +262,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--wall", type=float, default=Params.wall)
     ap.add_argument("--snap", type=float, default=Params.snap,
                     help="how far the lid's bead reaches into the front wall")
+    ap.add_argument("--pin", type=_pin, default=Params.pin,
+                    help="the hinge pin: filament (1.75mm), steel (2mm rod), or "
+                         "any rod's diameter in mm")
     ap.add_argument("--label", type=float, default=Params.label,
                     help="depth sizes are engraved into the pocket floors; 0 for none")
     ap.add_argument("--material", default="PLA")
@@ -268,7 +289,7 @@ def main(argv: list[str] | None = None) -> int:
     for p in lay.stacks:
         print(f"  {p.stack.label:>10}: {len(p.stack.saws)} nested, "
               f"{p.stack.height:.1f} mm tall, {params.pocket(p.stack):.1f} mm pocket")
-    print(f"hinge pin: {pin_length(params):.0f} mm of {params.pin} mm filament")
+    print(f"hinge pin: {pin_length(params):.0f} mm of {params.pin.name}")
     for name, part in (("tray", bottom), ("lid", top)):
         print(f"{name}: valid={part.is_valid}, {part.volume / 1000:.0f} cm^3")
     return 0
