@@ -1,18 +1,18 @@
 """Make the hole saw case from the command line, and look at it without a slicer.
 
     python -m tools.hole_saw_case
-    python -m tools.hole_saw_case --saw-height 30.5 --mandrel 36x11.5,16x31,14x16.5,40x6.8
-    python -m tools.hole_saw_case --nest 4      # two stacks of four, 7mm lower
+    python -m tools.hole_saw_case --nest 4      # two stacks of four, 5mm lower
+    python -m tools.hole_saw_case --material ASA --pin steel
 
-The numbers worth a pair of calipers before the first print are the soft ones
-in ``geom.hole_saws``: how tall the saws are from hub to teeth, and the
-mandrel's diameter along its length. ``--saw-height`` and ``--mandrel`` take
-them straight from the set in hand. ``--clearance`` is the next thing to touch
-if a saw drops in stiffly.
+The set in ``geom.hole_saws`` was measured with calipers. For another set of
+the same kind, ``--saw-height``, ``--rise`` and ``--mandrel`` take its numbers
+straight from the set in hand. ``--clearance`` is the next thing to touch if a
+saw drops in stiffly.
 
 Two halves, one plate each: the tray prints floor down and the lid prints on
-its face, so its lip and hinge knuckles point up. PLA is fine -- this lives in
-a drawer. After printing, cut a piece of 1.75mm filament to the length the
+its face, so its lip and hinge knuckles point up. ASA for a case that rides in
+a vehicle, where PLA would soften and creep in a hot cab; PLA if it lives in a
+drawer. After printing, cut a piece of 1.75mm filament to the length the
 command prints, straighten it, and push it through the knuckles from one end;
 it grips in the tray's and turns in the lid's. ``--pin steel`` bores the
 knuckles for 2mm steel rod instead -- 5/64in music wire or a drill blank, cut
@@ -246,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kit", default="warrior-57523",
                     help=f"which set: {', '.join(hole_saws.CATALOGUE)}")
     ap.add_argument("--saw-height", type=float, default=None,
-                    help="hub to tooth tips, measured; the catalogue's is an estimate")
+                    help="hub to tooth tips, in mm, for a set other than the catalogue's")
     ap.add_argument("--mandrel", default=None,
                     help="the mandrel as LENGTHxDIAMETER segments, chuck end first, "
                          "hexes across the corners")

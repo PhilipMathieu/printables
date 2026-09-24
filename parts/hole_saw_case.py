@@ -8,7 +8,7 @@ and the fact that both halves print without support.
 
 WHY IT IS ONE STACK. The saws nest: each drops into the cup of the next size
 up and stands on its back plate, a couple of millimetres prouder than the one
-round it. All eight together stand half an inch taller than one saw on its own,
+round it. All eight together stand 0.37 in taller than one saw on its own,
 in the floor space of the biggest. So the set is one pocket, not eight, and the
 case is barely taller than a case of flat saws while its footprint is set by
 the mandrel -- which is the longest thing in it and does not nest in anything.

@@ -110,16 +110,14 @@ def test_every_saw_has_a_place(params):
 # --- they nest ---------------------------------------------------------------
 
 
-def test_the_whole_set_is_one_stack_half_an_inch_proud(params):
-    """Measured on the set: all eight nest, and the 1 inch in the middle
-    stands about half an inch proud of the 2-1/2 round the outside."""
+def test_the_whole_set_is_one_stack_as_tall_as_measured(params):
+    """Measured on the set: all eight nest, one saw stands 1.15 in and the
+    whole stack 1.52 in."""
     (only,) = layout(params).stacks
     assert [s.inches for s in only.stack.saws] == [
         2.5, 2.25, 2.125, 2, 1.75, 1.5, 1.25, 1
     ]
-    assert only.stack.height == pytest.approx(
-        params.kit.tallest + 0.5 * MM_PER_INCH
-    )
+    assert only.stack.height == pytest.approx(1.52 * MM_PER_INCH)
 
 
 @pytest.mark.parametrize("nest", [1, 2, 3, 4, 8])
@@ -139,16 +137,15 @@ def test_validate_refuses_a_nest_the_set_does_not_make():
 
 def test_nesting_is_what_makes_it_compact(params):
     """One stack against every saw in its own pocket: under two thirds the
-    volume, for at most the half inch the stack stands proud -- less, since
-    the mandrel already stands taller than a single saw."""
+    volume, for at most the 0.37 in the stack stands proud of a single saw."""
     flat = Params(nest=1)
 
     def volume(p):
         lay = layout(p)
         return (lay.width + 2 * p.wall) * (lay.depth + 2 * p.wall) * p.height
 
-    assert volume(params) < 0.65 * volume(flat)
-    assert params.height - flat.height <= 0.5 * MM_PER_INCH + 1e-6
+    assert volume(params) < 0.55 * volume(flat)
+    assert params.height - flat.height <= (1.52 - 1.15) * MM_PER_INCH + 1e-6
 
 
 # --- everything goes in ----------------------------------------------------

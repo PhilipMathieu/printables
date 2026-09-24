@@ -21,7 +21,7 @@ funnel never once widens on the way down.
 
 A tray and a hinged lid for Harbor Freight's Warrior 57523 set: eight carbon
 steel saws from 1 to 2-1/2 inches, the large mandrel with its pilot bit, and
-the hex key. 116 x 104 x 50mm closed. The saws go in as one nested stack in
+the hex key. 99 x 100 x 44mm closed. The saws go in as one nested stack in
 one pocket, with the range engraved in its floor and a hole under it to push
 the stack up from below; the mandrel lies half buried in a cradle turned to its
 profile, dug out either side of the flange for a finger and thumb; the key lies
@@ -29,18 +29,16 @@ in a slot with a finger well at its end.
 
 ```sh
 python -m tools.hole_saw_case
-python -m tools.hole_saw_case --nest 4      # two stacks of four, 7mm lower
-python -m tools.hole_saw_case --pin steel   # bored for 2mm steel rod
-python -m tools.hole_saw_case --saw-height 30.5 --mandrel 36x11.5,16x31,14x16.5,40x6.8
+python -m tools.hole_saw_case --material ASA --pin steel   # for the truck
+python -m tools.hole_saw_case --nest 4      # two stacks of four, 5mm lower
 ```
 
 The saws nest. Each drops into the cup of the next size up and stands on its
-back plate, so the whole set, checked on the set itself, stands only half an
-inch taller than one saw, in the floor space of the biggest. That makes the
-set one pocket rather than eight, and the case 41 percent smaller than the
-same set laid out flat, for 11.5mm of extra height -- not the full half inch,
-because the mandrel lying down is already taller than a single saw. The
-longest thing in the case is now the mandrel, which does not nest in anything.
+back plate, so the whole set stands 1.52 inches tall against one saw's 1.15, in
+the floor space of the biggest. That makes the set one pocket rather than
+eight, and the case half the size of the same set laid out flat, for 9.4mm of
+extra height. The longest thing in the case is now the mandrel, which does not
+nest in anything.
 
 The rest is a packing: the mandrel along the front, then the stacks dropped
 in largest first, each to the lowest place it fits and then the leftmost, then
@@ -60,10 +58,12 @@ the back, because the hinge already locates that edge and a lip there would
 swing down into the tray. The tests swing it through 180 degrees with the set
 in place and check it touches nothing on the way.
 
-Only the saw sizes and the cut depth are published, and the nesting was
-checked by hand. The saws' height, the mandrel and the key are estimates,
-rounded the way that fails loose, and are the numbers to check with calipers
-before the first print -- the first two have flags.
+Every dimension of the set was measured with calipers on the set in hand:
+the saws' height and the nested stack, the mandrel, and the key. The 2-1/2
+inch saw came in at 2.51 across its teeth, inside the half millimetre allowed
+over nominal. The shank and the key read across their flats, so they are cut
+for their corners. `--saw-height`, `--rise` and `--mandrel` take another set's
+numbers.
 
 ### Poop bag holder
 
