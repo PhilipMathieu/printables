@@ -716,6 +716,86 @@ def pin_length(params: Params) -> float:
     return xs[-1][1] - xs[0][0]
 
 
+# ---- the test coupon ----------------------------------------------------------
+
+COUPON_FOOT = 12.0
+"""How far the coupon tray's foot reaches in front of its wall, to stand on."""
+
+
+def _coupon_span(params: Params) -> tuple[float, float]:
+    """The first three knuckles along x: tray, lid, tray."""
+    xs = _hinge_xs(params)
+    return xs[0][0], xs[2][1]
+
+
+def _coupon_floor(params: Params) -> float:
+    """Where the coupon's tray piece is cut off: a few millimetres of wall
+    under the foot of the knuckles' gusset."""
+    ya, za = hinge_axis(params)
+    back = layout(params).depth + params.wall
+    r = params.knuckle
+    return za - r * math.sqrt(2) - (ya - back + 0.5) - 4.0
+
+
+def _coupon_foot(params: Params) -> Part:
+    x0, x1 = _coupon_span(params)
+    back = layout(params).depth + params.wall
+    z0 = _coupon_floor(params)
+    return Pos(x0, back - params.wall - COUPON_FOOT, z0) * Box(
+        x1 - x0, COUPON_FOOT + params.wall, 2.0, align=(Align.MIN, Align.MIN, Align.MIN)
+    )
+
+
+def coupon(params: Params) -> tuple[Part, Part]:
+    """Three knuckles of the real hinge, cut from the real tray and lid, in
+    place, closed: (tray piece, lid piece).
+
+    Both are subsets of the case, so the bores, the gaps and the swing are
+    the case's own, and they print the way the case does -- the tray piece
+    standing on a foot, the lid piece on its face. Put a pin through before
+    printing the whole thing: it should need pressing into the outer two and
+    turn in the middle one.
+    """
+    ya, za = hinge_axis(params)
+    lay = layout(params)
+    back = lay.depth + params.wall
+    x0, x1 = _coupon_span(params)
+    r = params.knuckle
+    z0 = _coupon_floor(params)
+    if z0 <= params.seat:
+        raise ValueError("the coupon would cut into the pockets")
+    far = ya + r + 1
+    keep = Pos(x0, back - params.wall - 1, z0) * Box(
+        x1 - x0, far - (back - params.wall - 1), params.rim - z0,
+        align=(Align.MIN, Align.MIN, Align.MIN),
+    )
+    piece = (tray(params) & keep) + _coupon_foot(params)
+    strip = Pos(x0, back - params.wall - 8, za - r - 1) * Box(
+        x1 - x0, far - (back - params.wall - 8), params.height - (za - r - 1),
+        align=(Align.MIN, Align.MIN, Align.MIN),
+    )
+    return piece, lid(params) & strip
+
+
+def coupon_pieces_for_print(params: Params) -> tuple[Part, Part]:
+    """Each piece as it goes on the plate: the tray piece dropped onto its
+    foot, the lid piece turned onto its face as ``lid_for_print`` does."""
+    bottom, top = coupon(params)
+    return Pos(0, 0, -_coupon_floor(params)) * bottom, lid_for_print(params, top)
+
+
+def coupon_for_print(params: Params, gap: float = 6.0) -> Part:
+    """Both pieces side by side on one plate."""
+    bottom, top = coupon_pieces_for_print(params)
+    shift = bottom.bounding_box().max.Y + gap - top.bounding_box().min.Y
+    return bottom + Pos(0, shift, 0) * top
+
+
+def coupon_pin_length(params: Params) -> float:
+    x0, x1 = _coupon_span(params)
+    return x1 - x0
+
+
 def build(params: Params) -> Part:
     """Both halves, closed: for looking at, not for printing."""
     return tray(params) + lid(params)

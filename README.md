@@ -31,6 +31,7 @@ in a slot with a finger well at its end.
 python -m tools.hole_saw_case
 python -m tools.hole_saw_case --material ASA --pin steel   # for the truck
 python -m tools.hole_saw_case --nest 4      # two stacks of four, 5mm lower
+python -m tools.hole_saw_case --coupon --material ASA   # check the pin first
 ```
 
 The saws nest. Each drops into the cup of the next size up and stands on its
@@ -57,6 +58,12 @@ to take all of the press. `--pin 2.4` takes any other rod. It has no lip along
 the back, because the hinge already locates that edge and a lip there would
 swing down into the tray. The tests swing it through 180 degrees with the set
 in place and check it touches nothing on the way.
+
+`--coupon` prints three knuckles of that hinge -- tray, lid, tray -- cut
+straight out of the case's own tray and lid and printed the way they are, on
+a foot and on its face: a 34mm pin's worth, about fifteen minutes. The pin
+should need pressing into the outer two and turn freely in the middle one;
+if not, change `Pin.press` or `Pin.play` before printing the case.
 
 Every dimension of the set was measured with calipers on the set in hand:
 the saws' height and the nested stack, the mandrel, and the key. The 2-1/2

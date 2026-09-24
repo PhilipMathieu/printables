@@ -23,6 +23,13 @@ The whole set nests, so by default it goes in as one stack in one pocket;
 ``--nest`` splits it into shorter stacks, down to 1 for every saw in its own
 pocket, trading floor for height.
 
+``--coupon`` prints three knuckles of the hinge, cut from the real tray and
+lid, for checking the pin's fits in a quarter of an hour before committing to
+the case: the pin should need pressing into the outer two and turn freely in
+the middle one. If it is loose in the outer two, or tight in the middle,
+change ``Pin.press`` or ``Pin.play`` to suit your printer and print the
+coupon again.
+
 The preview is three views: the case open with the lid swung back, the layout
 that is actually the design, and the hinge in section with the lid drawn at
 each stage of its swing.
@@ -56,6 +63,9 @@ from parts.hole_saw_case import (  # noqa: E402
     STEEL_PIN,
     Params,
     Pin,
+    coupon,
+    coupon_for_print,
+    coupon_pin_length,
     hinge_axis,
     layout,
     lid,
@@ -190,6 +200,25 @@ def preview(params: Params, dest: Path, bottom: Part | None = None,
     return dest
 
 
+def coupon_preview(params: Params, dest: Path) -> Path:
+    """The coupon as it comes off the plate, and put together, half open."""
+    bottom, top = coupon(params)
+    fig = plt.figure(figsize=(10, 5), facecolor="white")
+    gs = fig.add_gridspec(1, 2, wspace=0.02, left=0.01, right=0.99, top=0.92,
+                          bottom=0.02)
+    points, tris = _fine(*mesh(coupon_for_print(params), tol=0.03), longest=3.0)
+    iso(fig.add_subplot(gs[0, 0], projection="3d"), points, tris,
+        "on the plate", elev=30, azim=-50)
+    points, tris = _fine(*mesh(bottom + opened(params, 90, top), tol=0.03), longest=3.0)
+    iso(fig.add_subplot(gs[0, 1], projection="3d"), points, tris,
+        f"pinned, open 90° · {coupon_pin_length(params):.0f} mm of {params.pin.name}",
+        elev=22, azim=-35)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(dest, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return dest
+
+
 def _mandrel(spec: str) -> tuple[hole_saws.Segment, ...]:
     """'36x11.5,16x32,...': length x diameter, chuck end first."""
     names = [s.name for s in hole_saws.WARRIOR_MANDREL]
@@ -272,9 +301,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-o", "--out", default="out/hole_saw_case",
                     help="output basename; _tray and _lid .stl/.3mf and a .png")
     ap.add_argument("--no-preview", action="store_true")
+    ap.add_argument("--coupon", action="store_true",
+                    help="print only three knuckles of the hinge, to check the pin "
+                         "fits before printing the case")
     args = ap.parse_args(argv)
 
     params = params_from(args)
+    if args.coupon:
+        base = Path(args.out)
+        base = base.with_name(base.name + "_coupon")
+        base.parent.mkdir(parents=True, exist_ok=True)
+        _write(coupon_for_print(params), base, args)
+        if not args.no_preview:
+            print(f"wrote {coupon_preview(params, base.with_suffix('.png'))}")
+        print(f"coupon pin: {coupon_pin_length(params):.0f} mm of {params.pin.name}; "
+              f"it should press into the outer two knuckles and turn in the middle one")
+        return 0
     bottom, top = tray(params), lid(params)
     base = Path(args.out)
     base.parent.mkdir(parents=True, exist_ok=True)

@@ -32,6 +32,12 @@ from parts.hole_saw_case import (
     key_depth,
     _snap_runs,
     _snap_z,
+    _coupon_floor,
+    _coupon_foot,
+    _coupon_span,
+    coupon,
+    coupon_for_print,
+    coupon_pieces_for_print,
     hinge_axis,
     layout,
     lid,
@@ -242,10 +248,10 @@ def test_the_snap_catches(params, top):
         assert reach == pytest.approx(-params.snap, abs=0.02)
 
 
-def _check_pin_bores(params, bottom, top):
+def _check_pin_bores(params, bottom, top, x0=None, span=None):
     ya, za = hinge_axis(params)
-    span = pin_length(params)
-    x0 = layout(params).width / 2
+    span = pin_length(params) if span is None else span
+    x0 = layout(params).width / 2 if x0 is None else x0
 
     def rod(diameter):
         return Pos(x0, ya, za) * Rot(0, 90, 0) * Cylinder(diameter / 2, span)
@@ -348,3 +354,44 @@ def test_validate_refuses_an_even_hinge():
 def test_validate_refuses_a_lip_that_reaches_the_tray():
     with pytest.raises(ValueError):
         Params(lip=30.0).validate()
+
+
+# --- the test coupon ----------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def coupon_pieces(params):
+    return coupon(params)
+
+
+def test_the_coupon_is_cut_from_the_case(params, bottom, top, coupon_pieces):
+    """Nothing in the coupon that is not in the case, bar the tray piece's
+    foot -- so what it says about the pin is what the case would say."""
+    piece, strip = coupon_pieces
+    assert piece.is_valid and strip.is_valid
+    assert (piece - bottom - _coupon_foot(params)).volume < TOUCH
+    assert (strip - top).volume < TOUCH
+    assert _coupon_floor(params) > params.seat
+
+
+def test_the_coupon_bores_are_the_case_bores(params, coupon_pieces):
+    x0, x1 = _coupon_span(params)
+    _check_pin_bores(params, *coupon_pieces, x0=(x0 + x1) / 2, span=x1 - x0)
+
+
+@pytest.mark.parametrize("degrees", [0, 45, 90, 135, 180])
+def test_the_coupon_swings(params, coupon_pieces, degrees):
+    piece, strip = coupon_pieces
+    assert (piece & opened(params, degrees, strip)).volume < TOUCH
+
+
+def test_the_coupon_prints_without_support(params):
+    piece, strip = coupon_pieces_for_print(params)
+    ya, za = hinge_axis(params)
+    held = (ya, za - _coupon_floor(params), (params.pin.diameter + params.pin.press) / 2)
+    free = (-ya, params.height - za, (params.pin.diameter + params.pin.play) / 2)
+    for solid, bore in ((piece, held), (strip, free)):
+        assert solid.bounding_box().min.Z == pytest.approx(0, abs=1e-6)
+        assert len(_overhangs(solid, [bore])) == 0
+    plate = coupon_for_print(params).bounding_box().size
+    assert max(plate.X, plate.Y) < 60
