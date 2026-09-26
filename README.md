@@ -15,6 +15,80 @@ funnel never once widens on the way down.
 
 ## What's in it
 
+### Hole saw case
+
+<img src="docs/hole_saw_case.png" alt="Hole saw case: open, the layout with the nested stack, and the hinge in section with the lid through its swing" width="100%">
+
+A tray and a hinged lid for Harbor Freight's Warrior 57523 set: eight carbon
+steel saws from 1 to 2-1/2 inches, the large mandrel with its pilot bit, and
+the hex key. 99 x 100 x 44mm closed. The saws go in as one nested stack in
+one pocket, with the range engraved in its floor and a hole under it to push
+the stack up from below; the mandrel lies half buried in a cradle turned to its
+profile, dug out either side of the flange for a finger and thumb; the key lies
+in a slot with a finger well at its end.
+
+```sh
+python -m tools.hole_saw_case
+python -m tools.hole_saw_case --material ASA --pin steel   # for the truck
+python -m tools.hole_saw_case --nest 4      # two stacks of four, 5mm lower
+python -m tools.hole_saw_case --coupon --material ASA   # check the pin first
+```
+
+The saws nest. Each drops into the cup of the next size up and stands on its
+back plate, so the whole set stands 1.52 inches tall against one saw's 1.15, in
+the floor space of the biggest. That makes the set one pocket rather than
+eight, and the case half the size of the same set laid out flat, for 9.4mm of
+extra height. The longest thing in the case is now the mandrel, which does not
+nest in anything.
+
+The rest is a packing: the mandrel along the front, then the stacks dropped
+in largest first, each to the lowest place it fits and then the leftmost, then
+the key into whichever of its eight ways of lying sits lowest -- found exactly,
+as a Minkowski sum of boxes and circles -- in a tray of every width in whole
+millimetres, keeping the smallest case. `--nest` splits the set into shorter
+stacks, down to one saw a pocket, trading floor for height.
+
+The lid turns on a length of 1.75mm filament, a press fit in the tray's
+knuckles and free in the lid's, and clicks shut on a bead that the front wall
+bows to let past. `--pin steel` bores the knuckles for 2mm steel rod instead
+(5/64in music wire or a drill blank, cut to 57mm and tapped home), which won't
+creep, wear or bend in a case that gets thrown around; the tray's bores get an
+extra 0.05mm, because steel gives nothing as it goes in and the knuckles have
+to take all of the press. `--pin 2.4` takes any other rod. It has no lip along
+the back, because the hinge already locates that edge and a lip there would
+swing down into the tray. The tests swing it through 180 degrees with the set
+in place and check it touches nothing on the way.
+
+`--coupon` prints three knuckles of that hinge -- tray, lid, tray -- cut
+straight out of the case's own tray and lid and printed the way they are, on
+a foot and on its face: a 34mm pin's worth, about fifteen minutes. The pin
+should need pressing into the outer two and turn freely in the middle one;
+if not, change `Pin.press` or `Pin.play` before printing the case.
+
+Every dimension of the set was measured with calipers on the set in hand:
+the saws' height and the nested stack, the mandrel, and the key. The 2-1/2
+inch saw came in at 2.51 across its teeth, inside the half millimetre allowed
+over nominal. The shank and the key read across their flats, so they are cut
+for their corners. `--saw-height`, `--rise` and `--mandrel` take another set's
+numbers.
+
+From the first print, in ASA on the P2S with four walls and 15% infill:
+
+- The hinge bores came out slightly warped -- unlike the coupon's, which print
+  their knuckles near the plate -- and had to be reamed to take the filament. The
+  bores are now 0.2mm over the pin in the tray and 0.5mm in the lid, up from
+  0.1 and 0.4.
+- The lid held too lightly on a 0.4mm bead, ASA being softer than PLA. The bead
+  is now 0.6mm; `--snap` sets it.
+- Nothing holds the hex key: it lies loose in its slot. The mandrel settles
+  back into its cradle and does not need holding. A detent for the key wants
+  to be a thin, flexing feature -- the tray round the slot is solid and will
+  not give -- and has not been designed or printed yet.
+- The tray is solid up to the mandrel's axis, with the pockets cut down into
+  it. That is a lot of volume, but at 15% infill it is probably less
+  filament than posts or clips holding the same pieces would be, and it is
+  what keeps the case stiff; it stays.
+
 ### Poop bag holder
 
 <img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">
@@ -126,7 +200,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip and lead webbing catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and hole saw catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
