@@ -72,6 +72,23 @@ over nominal. The shank and the key read across their flats, so they are cut
 for their corners. `--saw-height`, `--rise` and `--mandrel` take another set's
 numbers.
 
+From the first print, in ASA on the P2S with four walls and 15% infill:
+
+- The hinge bores came out slightly warped -- unlike the coupon's, which print
+  their knuckles near the plate -- and had to be reamed to take the filament. The
+  bores are now 0.2mm over the pin in the tray and 0.5mm in the lid, up from
+  0.1 and 0.4.
+- The lid held too lightly on a 0.4mm bead, ASA being softer than PLA. The bead
+  is now 0.6mm; `--snap` sets it.
+- Nothing holds the hex key: it lies loose in its slot. The mandrel settles
+  back into its cradle and does not need holding. A detent for the key wants
+  to be a thin, flexing feature -- the tray round the slot is solid and will
+  not give -- and has not been designed or printed yet.
+- The tray is solid up to the mandrel's axis, with the pockets cut down into
+  it. That is a lot of volume, but at 15% infill it is probably less
+  filament than posts or clips holding the same pieces would be, and it is
+  what keeps the case stiff; it stays.
+
 ### Poop bag holder
 
 <img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">

@@ -266,9 +266,10 @@ def _check_pin_bores(params, bottom, top, x0=None, span=None):
 
 
 def test_the_hinge_pin_is_held_by_the_tray_and_turns_in_the_lid(params, bottom, top):
-    """The tray's bores are a tenth over the filament and the lid's are four:
-    printed holes usually come out a tenth or two undersize, which makes the
-    first a press fit and leaves the second running free. Probed with a
+    """The tray's bores are two tenths over the filament and the lid's are
+    five: printed holes come out a tenth or two undersize, and more so on top
+    of the tray's walls, which makes the first a press fit and leaves the
+    second running free. Probed with a
     cylinder a hair over each bore -- it touches that half, and a cylinder of
     the tray's bore does not touch the lid at all."""
     _check_pin_bores(params, bottom, top)

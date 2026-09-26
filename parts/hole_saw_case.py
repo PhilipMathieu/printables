@@ -88,7 +88,10 @@ class Pin:
     """What the hinge turns on, and what is added to it for each half's bores.
 
     Printed holes come out a tenth or two undersize, so a bore a little over
-    the pin grips it and one well over lets it turn.
+    the pin grips it and one well over lets it turn. The allowances are the
+    ones the first case in ASA asked for: its bores came out slightly warped
+    -- the coupon's, printed near the plate, had not -- and had to be reamed
+    to take the filament at a tenth over, so both now have a tenth more.
     """
 
     name: str
@@ -99,8 +102,8 @@ class Pin:
     """Added to the pin for the lid's, which turn on it."""
 
 
-FILAMENT_PIN = Pin("1.75mm filament", 1.75, 0.1, 0.4)
-STEEL_PIN = Pin("2mm steel rod", 2.0, 0.15, 0.4)
+FILAMENT_PIN = Pin("1.75mm filament", 1.75, 0.2, 0.5)
+STEEL_PIN = Pin("2mm steel rod", 2.0, 0.25, 0.5)
 """5/64in music wire or a 2mm drill blank, cut to length. Filament gives a
 little as it is pushed in and steel gives nothing, so the tray's knuckles get
 an extra twentieth to keep the press from splitting them."""
@@ -132,9 +135,10 @@ class Params:
     """How far the lid's lip drops inside the walls."""
     lip_wall: float = 1.2
     lip_gap: float = 0.2
-    snap: float = 0.4
+    snap: float = 0.6
     """How far the bead stands proud of the lip -- and so how far the front
-    wall bows to let it past."""
+    wall bows to let it past. 0.4 held too lightly in ASA, which is softer
+    than PLA."""
     snap_play: float = 0.15
 
     notch: float = 8.0
