@@ -32,6 +32,7 @@ puts the supply across the motor one way for one press and the other way
 for the other, and the centre off shorts nothing. If the desk goes the wrong
 way, swap the motor leads. Check the cross with a meter before the jack sees
 power: a jumper on the wrong pair is a dead short on one press.
+``tools.desk_switch_wiring`` draws it, from the netlist the tests check.
 
 The preview is three views: both parts as printed, the side section that is
 the design -- the desk, the rocker, a fingertip on its top half, and the web
@@ -70,6 +71,7 @@ from parts.desk_switch import (  # noqa: E402
     lid,
     shell,
 )
+from tools.desk_switch_wiring import diagram as wiring_diagram  # noqa: E402
 from tools.render import INK, iso, mesh, plate, section  # noqa: E402
 
 DESK = "#b08a5a"
@@ -303,6 +305,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.no_preview:
         print(f"wrote {preview(params, base.with_suffix('.png'), (box, cover))}")
+        print(f"wrote {wiring_diagram(base.with_name(base.name + '_wiring.png'))}")
 
     sw = params.switch
     print(f"{sw.name}: {sw.cutout[0]} x {sw.cutout[1]} mm cutout in a {params.clip_panel} mm web, "

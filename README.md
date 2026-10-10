@@ -131,7 +131,16 @@ loops: the web is solid, and it holds the clips' grip through a summer.
 Wired as the usual reversing cross -- middle tabs to the motor, the jack's
 positive to one diagonal pair and its negative to the other -- the switch
 runs the desk up while the top is held, down while the bottom is held, and
-stops when let go. The tool's docstring has it.
+stops when let go. The diagram is drawn by `tools/desk_switch_wiring.py`
+(schemdraw for the circuit, matplotlib for the tabs) from a netlist that the
+tests also check: each press drives the motor the opposite way to the other,
+the centre leaves it off, and no position joins + to −.
+
+<img src="docs/desk_switch_wiring.png" alt="Desk switch wiring: the reversing cross as a schematic, and the six tabs seen from inside the box" width="100%">
+
+```sh
+python -m tools.desk_switch_wiring -o docs/desk_switch_wiring.png
+```
 
 ### Commemorative coin
 

@@ -374,3 +374,42 @@ def test_a_flange_with_no_room_for_a_screw_head_is_rejected():
 def test_a_lid_validates_the_same_way():
     with pytest.raises(ValueError, match="clips grab"):
         lid(Params(clip_panel=0.9))
+
+
+# --- the wiring --------------------------------------------------------------
+
+
+def test_the_wiring_reverses_the_motor_and_never_shorts():
+    """The netlist the diagram is drawn from: one press runs the motor one
+    way, the other the other way, and the centre leaves it alone."""
+    from tools.desk_switch_wiring import WIRING, check, motor
+
+    check()
+    up, down = motor("top"), motor("bottom")
+    assert up == ("+", "-") and down == ("-", "+")
+    assert motor("off") is None
+    # Read from the wrong side, the picture is mirrored left to right. The
+    # mirror image of the cross is the same circuit, so it wires the same.
+    mirrored = {(row, {"left": "right", "right": "left"}[col]): net for (row, col), net in WIRING.items()}
+    check(mirrored)
+    assert motor("top", mirrored) == up
+
+
+def test_a_jumper_on_a_common_is_a_short_and_is_caught():
+    from tools.desk_switch_wiring import WIRING, check
+
+    wrong = dict(WIRING)
+    wrong[("middle", "left")] = "+"
+    with pytest.raises(ValueError, match="short"):
+        check(wrong)
+
+
+def test_supply_on_one_row_drives_nothing_and_is_caught():
+    """+ on both top tabs and - on both bottom: each press puts one side of
+    the supply on both motor leads."""
+    from tools.desk_switch_wiring import WIRING, check
+
+    wrong = dict(WIRING)
+    wrong[("top", "right")], wrong[("bottom", "right")] = "+", "-"
+    with pytest.raises(ValueError):
+        check(wrong)
