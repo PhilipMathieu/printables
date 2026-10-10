@@ -42,12 +42,14 @@ def ring_colors(n: int):
     return [cmap(i / max(1, n - 1)) for i in range(n)]
 
 
-def plate(parts: list[Part], gap: float = 6.0, nozzle: float = profiles.DEFAULT_NOZZLE):
+def plate(parts: list[Part], gap: float = 6.0, nozzle: float = profiles.DEFAULT_NOZZLE,
+          check: bool = True):
     """Lay parts out in a roughly square grid, centred on the origin.
 
     Sized off the largest one so a mixed set -- clips cut for different stems,
     say -- still lands on a regular grid; the slicer centres the whole thing on
-    the bed afterwards.
+    the bed afterwards. ``check=False`` skips the bed test, for a machine that
+    has no Bambu Studio to read the bed size from.
     """
     sizes = [p.bounding_box().size for p in parts]
     pitch_x = max(s.X for s in sizes) + gap
@@ -61,6 +63,8 @@ def plate(parts: list[Part], gap: float = 6.0, nozzle: float = profiles.DEFAULT_
         laid += Pos(
             (col - (cols - 1) / 2) * pitch_x, (row - (rows - 1) / 2) * pitch_y, 0
         ) * part
+    if not check:
+        return laid
     size = laid.bounding_box().size
     mach = profiles.machine(nozzle)
     if not mach.fits((size.X, size.Y, size.Z)):

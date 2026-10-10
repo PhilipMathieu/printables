@@ -169,6 +169,53 @@ A clip holds a band of stem diameters a couple of millimetres wide — from its
 mouth, the smallest stem that stays captive, up to its bore, the largest that
 fits. `--set` prints the four sizes that tile the range between them.
 
+### Desk switch box
+
+<img src="docs/desk_switch.png" alt="Desk switch box: both parts as printed, the section through the rocker with a fingertip on its top half, and the plan" width="100%">
+
+A box for a KCD4 rocker -- the 6-pin, (on)-off-(on) momentary DPDT kind --
+that screws to the underside of a sit-stand desk at its front edge, with a
+5.5 × 2.1mm DC jack and a tied-down lead to a Greartisan 12V gearmotor out
+of the back. The rocker rocks up and down, because "press the top for up"
+is the one mapping that needs no label, and it sits a fingertip's headroom
+under the desk's edge so the top half can be pressed without a knuckle
+meeting the desktop.
+
+```sh
+python -m tools.desk_switch --coupon                 # print this first
+python -m tools.desk_switch
+python -m tools.desk_switch --cutout 22.2 26.2 --jack-hole 11.5 --mirror
+```
+
+KCD4 is a family name, not a drawing: the housing behind the bezel is 22 ×
+30mm on some and 22 × 26mm on others. Measure it, pass `--cutout` with 0.2
+added, and print `--coupon` -- just the front of the box, the same way up --
+to snap the switch into before printing the shell. The switch has no nut;
+its clips grab a 1–3mm panel, so the 4mm front wall is pocketed down to a
+2mm web round the cutout, and the pocket runs out of the open edge so it has
+no ledge to overhang.
+
+Two parts, no supports. The shell prints rim-down, so the flanges are the
+first layer; the jack hole is a teardrop, and the cutout's far end is a
+straight bridge across the 2mm web. The lid prints face-down with 45°
+countersinks, locates on a lip, and screws into the corner posts, so wiring
+never means unscrewing the box from the desk. Print it in ASA with six wall
+loops: the web is solid, and it holds the clips' grip through a summer.
+
+Wired as the usual reversing cross -- middle tabs to the motor, the jack's
+positive to one diagonal pair and its negative to the other -- the switch
+runs the desk up while the top is held, down while the bottom is held, and
+stops when let go. The diagram is drawn by `tools/desk_switch_wiring.py`
+(schemdraw for the circuit, matplotlib for the tabs) from a netlist that the
+tests also check: each press drives the motor the opposite way to the other,
+the centre leaves it off, and no position joins + to −.
+
+<img src="docs/desk_switch_wiring.png" alt="Desk switch wiring: the reversing cross as a schematic, and the six tabs seen from inside the box" width="100%">
+
+```sh
+python -m tools.desk_switch_wiring -o docs/desk_switch_wiring.png
+```
+
 ### Commemorative coin
 
 <img src="docs/tremblant_coin.png" alt="Coin: obverse, reverse and rim section" width="100%">
