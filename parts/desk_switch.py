@@ -1,57 +1,60 @@
-"""Desk switch box: a Gardner Bender GSW-117 toggle under a sit-stand desk.
+"""Desk switch box: a KCD4 rocker under a sit-stand desk.
 
-A box that screws to the underside of the desktop at its front edge, with the
-toggle coming out of the front face where a hand reaches under the lip, a
+A box that screws to the underside of the desktop at its front edge, with a
+snap-in KCD4 rocker in the front face where a hand reaches under the lip, a
 5.5 x 2.1mm DC jack and a strain-relieved lead out of the back, and a lid
 that comes off for wiring without unscrewing anything from the desk. Two
-parts, both printed flat with nothing overhanging: the shell rim-down so its
+parts, both printed flat with no supports: the shell rim-down so its
 mounting flanges are the first layer, the lid face-down so the face you see
 is the smooth one.
 
-WHY THE TOGGLE THROWS UP AND DOWN. It is the only mapping that needs no
-label: push the bat up and the desk goes up. That puts the switch body in the
-front wall with its long axis vertical, and it puts a finger *between the
-handle and the desk* every time the desk is sent down -- which is the whole
-clearance problem. Everything about the box's height follows from that one
-gap: the axis sits ``finger`` below the desk plus however far the bat's tip
-rises when it is thrown, and the box is exactly as tall as it has to be to
-get the switch body in under that.
+WHY THE ROCKER ROCKS UP AND DOWN. It is the only mapping that needs no
+label: press the top and the desk goes up, press the bottom and it comes
+down. That stands the rocker's long axis vertical in the front wall, and it
+puts a fingertip on the top half of the rocker just under the desk's edge,
+which is what sets the box's height: the bezel sits ``headroom`` below the
+desk, and the box is exactly as tall as it takes to get the switch body in
+under that.
 
-WHY IT IS STIFF. The GSW-117 is a 20 A switch with a spring that has to
-return a bat handle to centre, and it fights back. The load it puts into the
-box is along the throw -- vertical, in the plane of the front wall -- which
-is the direction a wall is stiffest in, so the wall does not bend; the only
-question is whether the box moves on the desk. It cannot, because it hangs
-from three flanges and four wood screws with a 45 degree gusset under every
-flange, and the clamping face round the bushing is a 4mm wall with the nut on
-it. Print the shell with enough perimeters that the wall round the switch is
-solid plastic, not two skins over sparse infill: ``SLICE`` below asks for six.
+WHY THE WALL IS THIN ROUND THE HOLE. A KCD4 has no nut. It snaps in, and
+its spring clips -- on the short ends of the body, top and bottom here --
+only grab a panel 1 to 3mm thick. The front wall is 4mm so the rest of it is
+stiff, and a pocket on its inside face takes it down to ``clip_panel`` round
+the cutout, with room past the cutout's desk end for the top clip to spring
+back out behind the web. The pocket runs on out of the shell's open edge, so
+it has no far end to overhang and the bottom clip has the box to spring into.
+
+WHY IT IS STIFF. Pressing a rocker pushes into the front wall, and the bezel
+spreads that over the face round the hole; the box resists it as a whole,
+hanging from three flanges and four wood screws with a 45 degree gusset
+under every flange. ``SLICE`` asks for six wall loops so the web and the
+wall round it are solid plastic rather than two skins over infill.
 
 WHY THE JACK IS ON THE BACK. The supply cable and the motor lead both leave
-the box away from the knees, and a plug in the back wall is behind everything
-a leg does. The jack and the lead exit are on opposite sides of the back wall
-so the plug and the tie-down do not fight for the same air.
+the box away from the knees. The jack and the lead exit are on opposite
+sides of the back wall so the plug and the tie-down do not fight for the
+same air, and the jack sits off to the side of the switch so its body and
+the switch's crimped terminals do not either.
 
 WHY IT PRINTS RIM-DOWN. The rim is the face that meets the desk, and the
 flanges hang off it, so with the rim on the plate the flanges are the first
-layer and nothing anywhere overhangs. Every hole in a wall is a teardrop with
-its point away from the plate and a 2mm flat across the tip, which the nozzle
-bridges without a thought and the nut and washer cover. The one thing the
-orientation costs is a floor: an open rim printed downward means an open end
-printed upward, and that end is the lid.
+layer. The jack hole is a teardrop with a 2mm flat across its tip, which the
+nut covers. The rocker's cutout is a rectangle, because the bezel only
+overlaps it by a millimetre and a teardrop would show; its far end is a
+straight bridge across the 2mm web, which a P2S draws without sagging.
 
-WHAT THE HARDWARE IS. The GSW-117 is Gardner Bender's heavy-duty bat-handle
-family: 15/32"-32 bushing in a 1/2" hole, 0.57 x 1.13" body, 0.65" toggle,
-screw terminals off the back, and a nut and lock ring in the bag. The DPDT
-version, GSW-123, is the same body in the same hole, and see the wiring note
-in the tool: a single SPDT cannot reverse a motor on its own. The jack is the
-threaded 5.5 x 2.1mm panel type sold in fives with a pigtail; they vary
-between 11 and 12.3mm across the thread, so measure yours against
-``Jack.hole``. The motor is Greartisan's 37mm gearmotor or worm gearmotor,
-which only matters to this box as a pair of leads through a notch.
+WHAT THE HARDWARE IS. The switch is the 6-pin KCD4 sold as (on)-off-(on)
+momentary DPDT -- VEXUNGA's pack of six among many -- rated 16 A 250 V. KCD4
+is a family name, not a drawing: cutouts run 26 x 22 to 30 x 22mm between
+makers, so measure the body behind the bezel and set ``Rocker.cutout``, or
+print the ``coupon`` first. The jack is the threaded 5.5 x 2.1mm panel type
+sold in fives with a pigtail; they vary between 11 and 12.3mm across the
+thread, so measure yours against ``Jack.hole``. The motor is Greartisan's
+37mm gearmotor or worm gearmotor, which only matters to this box as a pair
+of leads through a notch.
 
-Print it in ASA. A nut torqued onto PLA loosens over a summer as the plastic
-creeps out from under it; ASA holds a preload.
+Print it in ASA: the clips hold the switch by pressing on the web for as
+long as it is in, and ASA keeps that grip through a summer where PLA creeps.
 """
 
 from __future__ import annotations
@@ -75,8 +78,6 @@ from build123d import (
     extrude,
 )
 
-MM_PER_INCH = 25.4
-
 MAX_LEAN = 45.0
 """Degrees off vertical a downward face may lean unsupported."""
 
@@ -91,55 +92,31 @@ still covers what the teardrop added."""
 
 
 @dataclass(frozen=True)
-class Switch:
-    """A heavy-duty bat-handle toggle, as its panel and its box see it.
+class Rocker:
+    """A snap-in rocker switch, as its panel and its box see it.
 
-    Defaults are the GSW-117 from Gardner Bender's own figures where they give
-    them (body, toggle, bushing thread, hole) and the industry-standard
-    15/32"-32 family where they do not (bushing length, throw, lock ring).
+    Defaults are the 30 x 22mm-cutout KCD4 most US sellers list for the 16 A
+    6-pin parts. Every "length" runs along the rocking direction, which in
+    this box is vertical; every "width" is across it.
     """
 
-    name: str = "GSW-117"
-    bushing: float = 15 / 32 * MM_PER_INCH
-    """Diameter across the thread, 11.9mm."""
-    bushing_length: float = 12.0
-    """How far the thread stands off the body. Panel plus washer plus nut have
-    to fit in it with thread to spare."""
-    hole: float = 13.0
-    """Panel hole. The nominal is 1/2" (12.7); a printed hole comes out a
-    couple of tenths under, and the bushing is 0.8mm under it anyway."""
-    nut_flats: float = 9 / 16 * MM_PER_INCH
-    """Across the flats of the 15/32"-32 nut, 14.3mm."""
-    nut_thickness: float = 3.2
-    washer: float = 1.0
-    """Lock ring thickness, between the nut and the panel."""
-    body_width: float = 0.57 * MM_PER_INCH
-    """Across the body, perpendicular to the throw: 14.5mm."""
-    body_length: float = 1.13 * MM_PER_INCH
-    """Along the throw: 28.7mm."""
-    body_depth: float = 30.0
-    """Behind the panel to the tips of the terminal screws. Not published;
-    generous for this family, which runs 26 to 30."""
-    toggle: float = 0.65 * MM_PER_INCH
-    """Bat handle, from the panel face to its tip: 16.5mm."""
-    toggle_diameter: float = 4.8
-    throw: float = 30.0
-    """Degrees each side of centre. Heavy-duty toggles run 25 to 30; the
-    bigger number is the safe one, since it only ever adds clearance."""
-    tab_offset: float = 0.376 * MM_PER_INCH
-    """Lock ring's anti-rotation tab, from the bushing centre: 9.55mm. Zero
-    leaves the hole out."""
-    tab_hole: float = 2.8
-
-    @property
-    def tip_rise(self) -> float:
-        """How far above its centreline the bat reaches when thrown."""
-        return self.toggle * math.sin(math.radians(self.throw)) + self.toggle_diameter / 2
-
-    @property
-    def nut_corners(self) -> float:
-        """Across the corners of the nut."""
-        return self.nut_flats / math.cos(math.radians(30))
+    name: str = "KCD4"
+    cutout: tuple[float, float] = (22.2, 30.2)
+    """Panel hole, width by length. Nominal 22 x 30 plus two tenths, which a
+    printed hole gives back; the clips want it snug, not loose."""
+    bezel: tuple[float, float] = (25.0, 32.0)
+    """The flange on the front of the panel, width by length."""
+    bezel_thickness: float = 2.5
+    rocker_rise: float = 6.0
+    """How far the rocker's pressed-out end stands proud of the bezel."""
+    body: tuple[float, float] = (21.8, 29.8)
+    """Housing behind the panel, width by length: the cutout, less a bit."""
+    body_depth: float = 29.0
+    """Behind the panel to the tips of the 6.3mm tabs."""
+    clips: float = 2.0
+    """How far each clip springs out past the cutout's end, behind the panel."""
+    panel_range: tuple[float, float] = (1.0, 3.0)
+    """Panel thicknesses the clips grab."""
 
 
 @dataclass(frozen=True)
@@ -164,9 +141,9 @@ class Jack:
         return self.nut_flats / math.cos(math.radians(30))
 
 
-GSW_117 = Switch()
-GSW_123 = replace(GSW_117, name="GSW-123")
-"""The DPDT one. Same body, same hole, and the one that reverses a motor."""
+KCD4 = Rocker()
+KCD4_26 = replace(KCD4, name="KCD4 26x22", cutout=(22.2, 26.2), bezel=(25.0, 28.0), body=(21.8, 25.8))
+"""The other common KCD4, a 26 x 22mm cutout."""
 
 
 @dataclass(frozen=True)
@@ -180,22 +157,32 @@ class Params:
     flipped for printing.
     """
 
-    switch: Switch = GSW_117
+    switch: Rocker = KCD4
     jack: Jack = Jack()
 
-    finger: float = 22.0
-    """Clear space between the thrown-up bat and the desk, for the finger
-    that pushes it down. A bare index finger is 16 to 20mm through."""
-    width: float = 66.0
+    headroom: float = 10.0
+    """Desk to the top of the bezel: room for the knuckle above a fingertip
+    pressing the rocker's top half."""
+    finger: float = 18.0
+    """A fingertip, through. Only checked: it has to fit between the desk and
+    the middle of the rocker's top half."""
+    width: float = 74.0
     """Inside, across the front."""
-    depth: float = 46.0
+    depth: float = 48.0
     """Inside, front wall to back wall."""
     clearance: float = 3.0
     """Air between the switch body and the lid."""
+    wiring: float = 16.0
+    """Behind the switch's tabs: a crimped quick-connect and the bend in its
+    wire. Solder and heat-shrink take less."""
 
     wall: float = 3.2
     panel: float = 4.0
-    """The front wall, which the switch is clamped through."""
+    """The front wall, away from the switch."""
+    clip_panel: float = 2.0
+    """The front wall where the switch's clips grab it."""
+    pocket_margin: float = 1.5
+    """Pocket past the cutout's sides, beyond what the clips need at its ends."""
     corner: float = 3.0
     """Radius on the shell's vertical corners and the flange's tips."""
 
@@ -225,12 +212,12 @@ class Params:
     lid_screw: float = 3.4
     countersink: float = 6.5
 
-    jack_x: float = 16.0
+    jack_x: float = 20.5
     """Jack centre across the back wall, from the middle. Positive is the
     side a right-handed viewer at the desk calls right."""
     jack_depth: float = 20.0
     """Jack centre below the desk."""
-    notch_x: float = -16.0
+    notch_x: float = -20.5
     """Motor lead exit across the back wall, opposite side from the jack."""
     notch: float = 7.0
     """Width of the lead exit; 6mm of two-core cable and a little."""
@@ -246,16 +233,19 @@ class Params:
 
     @property
     def axis_depth(self) -> float:
-        """Toggle centre below the desk: the finger, plus the bat's rise."""
-        return self.finger + self.switch.tip_rise
+        """Rocker centre below the desk: the headroom, plus half the bezel."""
+        return self.headroom + self.switch.bezel[1] / 2
+
+    @property
+    def press_depth(self) -> float:
+        """Middle of the rocker's top half, where a fingertip sends it up."""
+        return self.axis_depth - self.switch.cutout[1] / 4
 
     @property
     def height(self) -> float:
         """Shell, rim to open edge. The switch body has to fit under the axis
         with air under it, and then the lid's lip comes in."""
-        return (
-            self.axis_depth + self.switch.body_length / 2 + self.clearance + self.lip
-        )
+        return self.axis_depth + self.switch.body[1] / 2 + self.clearance + self.lip
 
     @property
     def overall_height(self) -> float:
@@ -281,6 +271,14 @@ class Params:
         return self.panel + self.depth
 
     @property
+    def pocket(self) -> tuple[float, float]:
+        """The thinned strip on the front wall's inside: its width, and the
+        depth below the desk it starts at, a clip and a millimetre above the
+        cutout. It runs from there out of the open edge."""
+        w, length = self.switch.cutout
+        return w + 2 * self.pocket_margin, self.axis_depth - length / 2 - self.switch.clips - 1.0
+
+    @property
     def screw_positions(self) -> tuple[tuple[float, float], ...]:
         """(x, y) of the four wood screws, in the side flanges."""
         x = self.outer_width / 2 + self.flange / 2 + 1.5
@@ -298,73 +296,61 @@ class Params:
     def tie_y(self) -> float:
         return self.back_inner - self.tie_back
 
-    @property
-    def handle_top(self) -> float:
-        """Depth of the highest point the bat reaches, thrown toward the desk."""
-        return self.axis_depth - self.switch.tip_rise
-
     def validate(self) -> None:
         sw, jk = self.switch, self.jack
-        if self.finger < 15:
+        cw, cl = sw.cutout
+        if self.press_depth < self.finger / 2:
             raise ValueError(
-                f"{self.finger}mm is not room for a finger between the bat and "
-                f"the desk; nothing under 15 is"
+                f"a {self.finger}mm fingertip on the rocker's top half at "
+                f"{self.press_depth:.1f}mm below the desk hits the desk; more "
+                f"headroom moves the switch down"
             )
-        if min(self.wall, self.lid) < MIN_WALL:
+        if self.headroom < 3.0:
             raise ValueError(
-                f"a {min(self.wall, self.lid)}mm wall is under {MIN_WALL}mm, "
-                f"which is two extrusions on the 0.4mm nozzle"
+                f"{self.headroom}mm of headroom puts the bezel against the desk"
+            )
+        if min(self.wall, self.lid, self.clip_panel) < MIN_WALL:
+            raise ValueError(
+                f"a {min(self.wall, self.lid, self.clip_panel)}mm wall is under "
+                f"{MIN_WALL}mm, which is two extrusions on the 0.4mm nozzle"
             )
         if self.panel < self.wall:
             raise ValueError(
                 f"the {self.panel}mm front wall is thinner than the {self.wall}mm "
-                f"sides, and it is the wall the switch is clamped through"
+                f"sides, and it is the wall the switch is pressed into"
             )
-        thread_left = sw.bushing_length - (self.panel + sw.washer + sw.nut_thickness)
-        if thread_left < 1.0:
+        lo, hi = sw.panel_range
+        if not lo <= self.clip_panel <= hi:
             raise ValueError(
-                f"a {self.panel}mm panel plus the {sw.name}'s washer and nut is "
-                f"{self.panel + sw.washer + sw.nut_thickness:.1f}mm on a "
-                f"{sw.bushing_length}mm bushing, which leaves "
-                f"{thread_left:.1f}mm of thread to bite; thin the panel"
+                f"the {sw.name}'s clips grab a {lo}-{hi}mm panel, not "
+                f"{self.clip_panel}mm"
             )
-        if sw.hole <= sw.bushing + 0.3:
+        if self.clip_panel > self.panel:
+            raise ValueError("the web under the clips is thicker than the wall")
+        if sw.bezel[0] < cw + 1.0 or sw.bezel[1] < cl + 1.0:
             raise ValueError(
-                f"a {sw.hole}mm hole will not pass an {sw.bushing:.1f}mm bushing "
-                f"once the print shrinks it"
+                f"a {sw.bezel[0]} x {sw.bezel[1]}mm bezel does not cover a "
+                f"{cw} x {cl}mm cutout"
             )
-        if sw.hole * math.sqrt(2) - BRIDGE / 2 > sw.nut_corners / 2 + sw.hole / 2 + 3:
+        if sw.body[0] > cw or sw.body[1] > cl:
             raise ValueError(
-                f"a {sw.hole}mm teardrop reaches past what a "
-                f"{sw.nut_flats:.1f}mm nut covers"
+                f"a {sw.body[0]} x {sw.body[1]}mm body will not pass a "
+                f"{cw} x {cl}mm cutout"
             )
-        # The switch has to sit in the wall with the whole nut on flat plastic:
-        # nothing above it but wall, nothing below it but wall, bosses clear.
-        top = self.axis_depth - sw.nut_corners / 2
-        if sw.tab_offset:
-            top = min(top, self.axis_depth - sw.tab_offset - sw.tab_hole / 2)
-            # The tab is on the desk side of the bushing and the teardrop's
-            # point goes the other way, so it is the round edge it has to clear.
-            if sw.tab_offset - sw.tab_hole / 2 - sw.hole / 2 < 1.0:
-                raise ValueError(
-                    f"the lock ring's tab hole at {sw.tab_offset:.1f}mm leaves "
-                    f"under a millimetre of wall to the {sw.hole}mm switch hole"
-                )
-        if top < self.flange_thickness + self.gusset + 1.0:
+        # The pocket stays clear of the corner posts and short of the rim.
+        pw, top = self.pocket
+        if pw / 2 > self.width / 2 - self.boss - 1.0:
             raise ValueError(
-                f"the switch hole comes within {top:.1f}mm of the desk, inside the "
-                f"flange; a bigger finger gap moves it down"
+                f"a {sw.name} between {self.boss}mm corner posts needs the inside "
+                f"wider than {self.width}mm"
             )
-        if sw.body_width / 2 + 2.0 > self.width / 2 - self.boss:
+        if top < 1.0:
+            raise ValueError("the pocket round the switch runs out of the rim")
+        if sw.body_depth + self.wiring > self.depth:
             raise ValueError(
-                f"a {sw.body_width:.1f}mm switch body between {self.boss}mm corner "
-                f"posts needs the inside wider than {self.width}mm"
-            )
-        if sw.body_depth + 10.0 > self.depth:
-            raise ValueError(
-                f"{sw.body_depth}mm of switch behind the panel leaves no room to "
-                f"bend a wire in a {self.depth}mm deep box; make it "
-                f"{sw.body_depth + 10:.0f} or more"
+                f"{sw.body_depth}mm of switch behind the panel and "
+                f"{self.wiring}mm of wiring need a box {sw.body_depth + self.wiring:.0f} "
+                f"deep, not {self.depth}"
             )
         # The jack: in the back wall, out of the flange, out of the corner
         # post, and its body clear of the switch body sideways.
@@ -382,10 +368,10 @@ class Params:
                 f"the jack at x={self.jack_x} puts its nut into the corner post; "
                 f"bring it in or widen the box"
             )
-        if abs(self.jack_x) - jk.body / 2 < sw.body_width / 2 + 2.0:
+        if abs(self.jack_x) - jk.body / 2 < sw.body[0] / 2 + 2.0:
             raise ValueError(
                 f"the jack body at x={self.jack_x} sits over the switch body; "
-                f"move it out past {sw.body_width / 2 + jk.body / 2 + 2:.0f}"
+                f"move it out past {sw.body[0] / 2 + jk.body / 2 + 2:.0f}"
             )
         if self.jack_x * self.notch_x >= 0:
             raise ValueError("the jack and the lead exit want opposite sides")
@@ -461,6 +447,15 @@ def _in_wall(sketch: Sketch, x: float, z: float, y0: float, y1: float) -> Part:
 # --- the parts ----------------------------------------------------------------
 
 
+def _pocket(params: Params) -> Part:
+    """The thinned strip on the front wall's inside, out to the open edge."""
+    p = params
+    pw, top = p.pocket
+    back = p.panel + 0.5
+    length = p.height + 1.0 - top
+    return Pos(0, (p.clip_panel + back) / 2, top + length / 2) * Box(pw, back - p.clip_panel, length)
+
+
 def shell(params: Params) -> Part:
     """The box, as printed: rim and flanges on the plate, open end up."""
     params.validate()
@@ -488,18 +483,29 @@ def shell(params: Params) -> Part:
             p.screw / 2, p.flange_thickness + p.gusset + 2
         )
 
-    # The switch, through the front wall, and the lock ring's tab above it.
-    part -= _in_wall(teardrop(sw.hole), 0.0, p.axis_depth, 0.0, p.panel)
-    if sw.tab_offset:
-        part -= _in_wall(
-            teardrop(sw.tab_hole), 0.0, p.axis_depth - sw.tab_offset, 0.0, p.panel
-        )
+    # The switch, through the front wall, thinned round it for the clips.
+    cw, cl = sw.cutout
+    part -= _pocket(p)
+    part -= Pos(0, p.panel / 2, p.axis_depth) * Box(cw, p.panel + 1.0, cl)
     # The jack, through the back wall; the lead, out of its open edge.
     part -= _in_wall(teardrop(jk.hole), p.jack_x, p.jack_depth, p.back_inner, p.outer_depth)
     part -= Pos(p.notch_x, p.back_inner + p.wall / 2, h - p.notch_height / 2 + 0.5) * Box(
         p.notch, p.wall + 1.0, p.notch_height + 1.0
     )
     return part
+
+
+def coupon(params: Params) -> Part:
+    """The front of the shell alone, to test-fit the switch before the box.
+
+    Everything from the front face back past the front corner posts, printed
+    the same way up as the shell, so the cutout and the web come out exactly
+    as they will in the box. Twenty minutes of plastic against two hours.
+    """
+    p = params
+    w = p.footprint[0] + 2
+    keep = p.panel + p.boss + 1.0
+    return shell(p) & Pos(0, keep / 2 - 0.5, p.height / 2) * Box(w, keep + 1.0, p.height + 2)
 
 
 def _lid_in_place(params: Params) -> Part:
@@ -557,45 +563,50 @@ def assembly(params: Params) -> Part:
 
 
 def switch_body(params: Params) -> Part:
-    """The switch at home: bushing through the wall, body behind it, nut on the front."""
+    """The housing at home: through the cutout from the face, tabs and all."""
     p, sw = params, params.switch
-    z = p.axis_depth
-    bushing = Pos(0, p.panel - sw.bushing_length / 2, z) * Rot(90, 0, 0) * Cylinder(
-        sw.bushing / 2, sw.bushing_length
+    bw, bl = sw.body
+    return Pos(0, sw.body_depth / 2, p.axis_depth) * Box(bw, sw.body_depth, bl)
+
+
+def switch_front(params: Params) -> Part:
+    """Bezel on the front face, and the rocker standing proud of it."""
+    p, sw = params, params.switch
+    (bw, bl), t = sw.bezel, sw.bezel_thickness
+    bezel = Pos(0, -t / 2, p.axis_depth) * Box(bw, t, bl)
+    cw, cl = sw.cutout
+    rocker = Pos(0, -t - sw.rocker_rise / 2, p.axis_depth) * Box(cw - 3.0, sw.rocker_rise, cl - 3.0)
+    return bezel + rocker
+
+
+def clips(params: Params) -> Part:
+    """The two spring clips, sprung out behind the web at the cutout's ends."""
+    p, sw = params, params.switch
+    cw, cl = sw.cutout
+    t = 1.0
+    y = p.clip_panel + t / 2 + 0.05
+    return sum(
+        (
+            Pos(0, y, p.axis_depth + s * (cl / 2 + sw.clips / 2)) * Box(cw - 4.0, t, sw.clips)
+            for s in (-1, 1)
+        ),
+        Part(),
     )
-    body = Pos(0, p.panel + sw.body_depth / 2, z) * Box(sw.body_width, sw.body_depth, sw.body_length)
-    return bushing + body
 
 
-def switch_nut(params: Params) -> Part:
-    """Washer and nut stacked on the front face, drawn round at the corners."""
-    p, sw = params, params.switch
-    stack = sw.washer + sw.nut_thickness
-    return Pos(0, -stack / 2, p.axis_depth) * Rot(90, 0, 0) * Cylinder(sw.nut_corners / 2, stack)
-
-
-def toggle(params: Params, thrown: float = 0.0) -> Part:
-    """The bat, pivoting at the panel face; ``thrown`` in degrees, negative
-    toward the desk."""
-    p, sw = params, params.switch
-    bat = Pos(0, -sw.toggle / 2, 0) * Rot(90, 0, 0) * Cylinder(sw.toggle_diameter / 2, sw.toggle)
-    return Pos(0, 0, p.axis_depth) * (Rot(thrown, 0, 0) * bat)
-
-
-def toggle_sweep(params: Params) -> Part:
-    """Everywhere the bat ever is: at rest and at either end of its throw."""
-    t = params.switch.throw
-    return toggle(params) + toggle(params, -t) + toggle(params, t)
-
-
-def finger(params: Params) -> Part:
-    """A finger laid along the desk's underside where it pushes the bat down.
-
-    A cylinder ``finger`` through, tangent to the desk and to the front face,
-    lying across the front of the box: it has to clear the thrown-up bat.
-    """
+def fingertip(params: Params) -> Part:
+    """A fingertip pointed at the box, on the middle of the rocker's top half."""
     p = params
-    return Pos(0, -p.finger / 2, p.finger / 2) * Rot(0, 90, 0) * Cylinder(p.finger / 2, p.width)
+    sw = p.switch
+    reach = 40.0
+    front = sw.bezel_thickness + sw.rocker_rise
+    return Pos(0, -front - reach / 2, p.press_depth) * Rot(90, 0, 0) * Cylinder(p.finger / 2, reach)
+
+
+def desk(params: Params) -> Part:
+    """The desktop above the box, flush with its front face."""
+    w, d = params.footprint
+    return Pos(0, d / 2 + 20, -10) * Box(w + 40, d + 40, 20)
 
 
 def jack_body(params: Params) -> Part:
@@ -624,9 +635,8 @@ def screw_heads(params: Params) -> Part:
 
 
 SLICE = {
-    # The wall round the switch bushing is where the whole part is loaded, and
-    # a 4mm wall at two loops is two skins over sparse infill: the nut crushes
-    # it. Six loops make anything under 5mm solid.
+    # The web the clips grab is 2mm and the wall round it 4mm; six loops make
+    # both solid plastic instead of skins over sparse infill.
     "wall_loops": "6",
     "sparse_infill_density": "20%",
     "enable_support": "0",
@@ -650,4 +660,4 @@ if __name__ == "__main__":
             f"{name}: valid={part.is_valid} solids={len(part.solids())} "
             f"{bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm"
         )
-    print(f"toggle axis {p.axis_depth:.1f} mm below the desk, {p.finger} mm finger gap")
+    print(f"rocker centre {p.axis_depth:.1f} mm below the desk, {p.headroom} mm over the bezel")

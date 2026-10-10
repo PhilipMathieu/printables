@@ -1,39 +1,47 @@
 """Make the desk switch box from the command line, and look at it without a slicer.
 
     python -m tools.desk_switch
-    python -m tools.desk_switch --finger 25 --jack-hole 11.5 -o out/desk_switch
-    python -m tools.desk_switch --mirror            # jack on the left, lead on the right
+    python -m tools.desk_switch --coupon                # just the front, to test-fit the switch
+    python -m tools.desk_switch --cutout 22.2 26.2 --jack-hole 11.5 -o out/desk_switch
+    python -m tools.desk_switch --mirror                # jack on the left, lead on the right
 
-Most of it nobody needs to touch. ``--finger`` is the one worth a thought: it is
-the gap between the bat at the top of its throw and the desk, for the finger
-that pushes it down, and the box is exactly as tall as that gap plus the
-switch. ``--jack-hole`` is the one worth a measurement, because the threaded
-5.5 x 2.1mm jacks are sold at anything from 11 to 12.3mm across.
+Two numbers are worth a measurement before printing. ``--cutout`` is the
+rocker's panel hole, width by length: KCD4 is a family name, and the housing
+behind the bezel is 22 x 30mm on some and 22 x 26mm on others, so measure it
+and add 0.2. ``--jack-hole`` is the threaded 5.5 x 2.1mm jack's, which are
+sold at anything from 11 to 12.3mm across. ``--coupon`` prints just the front
+of the box, the same way up, so the switch can be snapped into the real
+cutout and web in twenty minutes before committing two hours to the shell.
 
 Both parts land on one plate: the shell rim-down, the lid face-down. It is
-written in ASA unless told otherwise, because the switch nut is torqued onto
-the front wall and PLA creeps out from under a nut over a summer.
+written in ASA unless told otherwise, because the clips hold the switch by
+pressing on the web, and PLA creeps out from under a constant load.
 
-WIRING. The GSW-117 is SPDT, (on)-off-(on): one common and two momentary
-outputs. On its own it can switch a motor on in one direction from either
-throw, but it cannot reverse one -- that takes both poles of a DPDT, or a
-pair of relays. For desk-up / desk-down from one bat, use the GSW-123, which
-is the same body in the same hole (``--switch gsw-123``), and wire it as the
-classic reversing X: the two centre terminals to the motor, the supply to one
-end pair, and the other end pair cross-wired to the first. With the SPDT,
-wire the supply's positive to the common, one throw to the motor, and treat
-the other throw as spare. Either way the jack's negative goes straight to the
-motor's other lead and the switch only ever breaks the positive.
+WIRING. The switch is DPDT (on)-off-(on): two poles side by side, each a
+column of three tabs with its common in the middle. Wired as the reversing
+cross it drives the motor one way while the top is held, the other way while
+the bottom is held, and stops when let go:
+
+    the two middle tabs           -> the motor's two leads
+    top-left and bottom-right     -> jack +   (a jumper across the back)
+    top-right and bottom-left     -> jack -   (the other jumper)
+
+Which end pair closes on which press is up to the maker -- on many rockers
+pressing the top closes the bottom pair -- and it does not matter: the cross
+puts the supply across the motor one way for one press and the other way
+for the other, and the centre off shorts nothing. If the desk goes the wrong
+way, swap the motor leads. Check the cross with a meter before the jack sees
+power: a jumper on the wrong pair is a dead short on one press.
 
 The preview is three views: both parts as printed, the side section that is
-the design -- the desk, the bat at rest and thrown, and the finger in the
-gap -- and a plan at the switch axis with the jack, the lead and the screws.
+the design -- the desk, the rocker, a fingertip on its top half, and the web
+the clips grab -- and a plan at the switch with the jack, the lead and the
+screws.
 """
 
 from __future__ import annotations
 
 import argparse
-import math
 import sys
 from pathlib import Path
 
@@ -43,6 +51,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle as CirclePatch
+from matplotlib.patches import Polygon as PolygonPatch
 from matplotlib.patches import FancyBboxPatch, Rectangle
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -53,11 +62,11 @@ from build123d import Part, export_stl  # noqa: E402
 
 from p2s import inventory, profiles  # noqa: E402
 from parts.desk_switch import (  # noqa: E402
-    GSW_117,
-    GSW_123,
+    KCD4,
     SLICE,
     Params,
     assembly,
+    coupon,
     lid,
     shell,
 )
@@ -66,7 +75,6 @@ from tools.render import INK, iso, mesh, plate, section  # noqa: E402
 DESK = "#b08a5a"
 HARDWARE = "#4a6fa5"
 FINGER = "#c8792b"
-SWITCHES = {"gsw-117": GSW_117, "gsw-123": GSW_123}
 
 
 def _side_view(ax, points, tris, params: Params) -> None:
@@ -84,35 +92,39 @@ def _side_view(ax, points, tris, params: Params) -> None:
                            edgecolor=DESK, lw=1.0, hatch="///"))
     ax.text(-26, 9, "desktop", fontsize=9, color=DESK, ha="left", va="center")
 
-    # The switch: body behind the wall, nut on it, bat at rest and thrown.
+    # The switch: body behind the wall, bezel on the face, the rocker tipped
+    # with its top end out, which is the end the finger presses.
     z = -p.axis_depth
-    ax.add_patch(Rectangle((p.panel, z - sw.body_length / 2), sw.body_depth, sw.body_length,
+    bl, bt = sw.bezel[1], sw.bezel_thickness
+    cl = sw.cutout[1]
+    ax.add_patch(Rectangle((0, z - sw.body[1] / 2), sw.body_depth, sw.body[1],
                            facecolor=HARDWARE, alpha=0.18, edgecolor=HARDWARE, lw=1.0))
-    ax.add_patch(Rectangle((-(sw.washer + sw.nut_thickness), z - sw.nut_corners / 2),
-                           sw.washer + sw.nut_thickness, sw.nut_corners,
+    ax.add_patch(Rectangle((-bt, z - bl / 2), bt, bl,
                            facecolor=HARDWARE, alpha=0.5, edgecolor=HARDWARE, lw=0.8))
-    for angle, alpha, lw in ((0, 0.35, 3.2), (-sw.throw, 1.0, 3.2), (sw.throw, 0.55, 3.2)):
-        a = math.radians(angle)
-        ax.plot([0, -sw.toggle * math.cos(a)], [z, z + sw.toggle * math.sin(a)],
-                color=HARDWARE, lw=lw, alpha=alpha, solid_capstyle="round")
-    ax.text(p.panel + sw.body_depth + 1.5, z, sw.name, fontsize=9, color=HARDWARE,
+    ax.add_patch(PolygonPatch(
+        [(-bt, z + cl / 2 - 1.5), (-bt - sw.rocker_rise, z + cl / 2 - 3.0),
+         (-bt - 1.5, z - cl / 2 + 1.5), (-bt, z - cl / 2 + 1.5)],
+        closed=True, facecolor=HARDWARE, alpha=0.8, edgecolor=HARDWARE, lw=0.8))
+    ax.text(sw.body_depth + 1.5, z, sw.name, fontsize=9, color=HARDWARE,
             ha="left", va="center")
-
-    # The finger, where it goes to push the bat down.
-    ax.add_patch(CirclePatch((-p.finger / 2, -p.finger / 2), p.finger / 2,
-                             facecolor=FINGER, alpha=0.18, edgecolor=FINGER, lw=1.2))
     ax.annotate(
-        f"{p.finger:.0f} mm for a finger",
-        xy=(-p.finger / 2, -p.finger / 2), xytext=(-p.finger - 24, -p.finger - 14),
-        fontsize=9, color=FINGER, ha="left",
-        arrowprops=dict(arrowstyle="->", color=FINGER, lw=1, connectionstyle="arc3,rad=0.3"),
+        f"{p.clip_panel:.0f} mm web\nfor the clips", xy=(p.clip_panel / 2, z - cl / 2 - 1.5),
+        xytext=(-bt - sw.rocker_rise - 3, z - cl / 2 - 6), fontsize=8.5, color=INK, ha="right",
+        arrowprops=dict(arrowstyle="->", color=INK, lw=0.8),
     )
+
+    # The fingertip, on the top half, with the desk above it.
+    front = bt + sw.rocker_rise
+    pz = -p.press_depth
+    ax.add_patch(Rectangle((-front - 34, pz - p.finger / 2), 34, p.finger,
+                           facecolor=FINGER, alpha=0.18, edgecolor=FINGER, lw=1.2))
+    ax.text(-front - 17, pz, "press for up", fontsize=8.5, color=FINGER, ha="center", va="center")
     ax.annotate(
-        "", xy=(-p.finger - 6, 0), xytext=(-p.finger - 6, z),
+        "", xy=(-front - 38, 0), xytext=(-front - 38, z + bl / 2),
         arrowprops=dict(arrowstyle="<->", color=INK, lw=0.9),
     )
-    ax.text(-p.finger - 7.5, z / 2, f"axis {p.axis_depth:.1f} mm\nbelow the desk",
-            fontsize=8.5, color=INK, ha="right", va="center")
+    ax.text(-front - 39.5, (z + bl / 2) / 2, f"{p.headroom:.0f} mm", fontsize=8.5, color=INK,
+            ha="right", va="center")
 
     # A wood screw in the back flange, dashed, for the record.
     sy = p.outer_depth + p.flange / 2
@@ -121,11 +133,11 @@ def _side_view(ax, points, tris, params: Params) -> None:
     ax.text(p.outer_depth / 2, -p.overall_height - 3, "lid comes off for wiring",
             fontsize=8.5, color=INK, ha="center", va="top")
 
-    ax.set_xlim(-p.finger - 40, d + 26)
+    ax.set_xlim(-front - 52, d + 26)
     ax.set_ylim(-p.overall_height - 9, 20)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_title("section at the toggle · bat thrown up, finger above it", color=INK, fontsize=11)
+    ax.set_title("section at the rocker · a fingertip on its top half", color=INK, fontsize=11)
 
 
 def _plan_view(ax, points, tris, params: Params) -> None:
@@ -145,9 +157,13 @@ def _plan_view(ax, points, tris, params: Params) -> None:
         ax.add_patch(CirclePatch((x, y), p.boss_hole / 2, facecolor="white", edgecolor=INK, lw=0.8))
 
     # The switch, the jack with a plug in it, the lead through its notch.
-    ax.add_patch(Rectangle((-sw.body_width / 2, p.panel), sw.body_width, sw.body_depth,
+    front = sw.bezel_thickness + sw.rocker_rise
+    ax.add_patch(Rectangle((-sw.body[0] / 2, 0), sw.body[0], sw.body_depth,
                            facecolor=HARDWARE, alpha=0.18, edgecolor=HARDWARE, lw=1.0))
-    ax.plot([0, 0], [0, -sw.toggle], color=HARDWARE, lw=3.2, solid_capstyle="round")
+    ax.add_patch(Rectangle((-sw.bezel[0] / 2, -sw.bezel_thickness), sw.bezel[0], sw.bezel_thickness,
+                           facecolor=HARDWARE, alpha=0.5, edgecolor=HARDWARE, lw=0.8))
+    ax.add_patch(Rectangle((-sw.cutout[0] / 2 + 1.5, -front), sw.cutout[0] - 3, sw.rocker_rise,
+                           facecolor=HARDWARE, alpha=0.8, edgecolor=HARDWARE, lw=0.8))
     ax.add_patch(Rectangle((p.jack_x - jk.body / 2, p.back_inner - jk.body_depth), jk.body,
                            jk.body_depth, facecolor=HARDWARE, alpha=0.18, edgecolor=HARDWARE, lw=1.0))
     ax.add_patch(Rectangle((p.jack_x - 5.5, p.outer_depth), 11, jk.plug,
@@ -161,11 +177,11 @@ def _plan_view(ax, points, tris, params: Params) -> None:
         ax.add_patch(Rectangle((x - sx / 2, p.tie_y - sy / 2), sx, sy, facecolor=INK, edgecolor="none"))
     ax.text(p.notch_x, p.outer_depth + jk.plug + 2, "to the motor", fontsize=9, color=INK,
             ha="center", va="bottom")
-    ax.text(0, -sw.toggle - 2, "front, flush with the desk's edge", fontsize=8.5, color=INK,
+    ax.text(0, -front - 2, "front, flush with the desk's edge", fontsize=8.5, color=INK,
             ha="center", va="top")
 
     ax.set_xlim(-w / 2 - 4, w / 2 + 4)
-    ax.set_ylim(-sw.toggle - 9, p.outer_depth + jk.plug + 9)
+    ax.set_ylim(-front - 9, p.outer_depth + jk.plug + 9)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title(
@@ -207,27 +223,33 @@ def _plated(parts: list[Part], nozzle: float) -> Part:
 
 
 def params_from(args: argparse.Namespace) -> Params:
-    switch = SWITCHES[args.switch.lower()]
-    if args.no_tab_hole:
-        switch = replace(switch, tab_offset=0.0)
+    w, length = args.cutout
+    grow_w, grow_l = w - KCD4.cutout[0], length - KCD4.cutout[1]
+    switch = replace(
+        KCD4,
+        cutout=(w, length),
+        bezel=(KCD4.bezel[0] + grow_w, KCD4.bezel[1] + grow_l),
+        body=(KCD4.body[0] + grow_w, KCD4.body[1] + grow_l),
+    )
     jack = replace(Params.jack, hole=args.jack_hole)
     jack_x, notch_x = args.jack_x, args.notch_x
     if args.mirror:
         jack_x, notch_x = -jack_x, -notch_x
     return Params(
-        switch=switch, jack=jack, finger=args.finger, width=args.width, depth=args.depth,
-        jack_x=jack_x, notch_x=notch_x, jack_depth=args.jack_depth,
+        switch=switch, jack=jack, headroom=args.headroom, clip_panel=args.clip_panel,
+        width=args.width, depth=args.depth, jack_x=jack_x, notch_x=notch_x,
+        jack_depth=args.jack_depth,
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--finger", type=float, default=Params.finger,
-                    help="gap between the thrown-up bat and the desk, mm")
-    ap.add_argument("--switch", default="gsw-117", choices=sorted(SWITCHES),
-                    help="gsw-117 (SPDT, as asked) or gsw-123 (DPDT, reverses a motor)")
-    ap.add_argument("--no-tab-hole", action="store_true",
-                    help="leave out the lock ring's anti-rotation hole")
+    ap.add_argument("--cutout", type=float, nargs=2, metavar=("W", "L"), default=KCD4.cutout,
+                    help="rocker panel hole, width by length; measure the housing and add 0.2")
+    ap.add_argument("--clip-panel", type=float, default=Params.clip_panel,
+                    help="web thickness the clips grab, mm (1 to 3)")
+    ap.add_argument("--headroom", type=float, default=Params.headroom,
+                    help="desk to the top of the bezel, mm")
     ap.add_argument("--jack-hole", type=float, default=Params.jack.hole,
                     help="panel hole for the DC jack; measure the thread and add 0.5")
     ap.add_argument("--jack-x", type=float, default=Params.jack_x)
@@ -238,8 +260,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--width", type=float, default=Params.width, help="inside, mm")
     ap.add_argument("--depth", type=float, default=Params.depth, help="inside, mm")
     ap.add_argument("--part", default="both", choices=("both", "shell", "lid"))
+    ap.add_argument("--coupon", action="store_true",
+                    help="only the front of the shell, to test-fit the switch")
     ap.add_argument("--material", default="ASA",
-                    help="what to slice it for; ASA because a nut on PLA loosens")
+                    help="what to slice it for; ASA because the clips' grip creeps out of PLA")
     ap.add_argument("--nozzle", type=float, default=profiles.DEFAULT_NOZZLE)
     ap.add_argument("--slice", action="store_true",
                     help="also slice the 3mf with this part's wall count, for a time")
@@ -251,6 +275,11 @@ def main(argv: list[str] | None = None) -> int:
     params = params_from(args)
     box, cover = shell(params), lid(params)
     chosen = {"both": [box, cover], "shell": [box], "lid": [cover]}[args.part]
+    if args.coupon:
+        chosen = [coupon(params)]
+        if args.out == "out/desk_switch":
+            args.out = "out/desk_switch_coupon"
+        args.no_preview = True
     part = chosen[0] if len(chosen) == 1 else _plated(chosen, args.nozzle)
 
     base = Path(args.out)
@@ -276,11 +305,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {preview(params, base.with_suffix('.png'), (box, cover))}")
 
     sw = params.switch
-    print(f"{sw.name}: axis {params.axis_depth:.1f} mm below the desk, "
-          f"{params.finger:.0f} mm finger gap, {params.panel} mm panel under the nut")
+    print(f"{sw.name}: {sw.cutout[0]} x {sw.cutout[1]} mm cutout in a {params.clip_panel} mm web, "
+          f"bezel {params.headroom:.0f} mm below the desk")
     w, d = params.footprint
     print(f"footprint on the desk {w:.0f} × {d:.0f} mm, {params.overall_height:.0f} mm tall with the lid")
-    print(f"slice with wall_loops={SLICE['wall_loops']} so the wall round the bushing is solid")
+    print(f"slice with wall_loops={SLICE['wall_loops']} so the web and the wall round it are solid")
     bb = part.bounding_box()
     print(f"valid={part.is_valid} {bb.size.X:.1f} × {bb.size.Y:.1f} × "
           f"{bb.size.Z:.1f} mm, {part.volume / 1000:.1f} cm^3")

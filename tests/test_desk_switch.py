@@ -1,8 +1,9 @@
 """Geometric assertions for the desk switch box.
 
-What decides whether this works is not visible in a render: that a finger fits
-between the thrown bat and the desk, that the switch and the jack sit in their
-walls with the nuts on flat plastic and nothing touching, that a driver can
+What decides whether this works is not visible in a render: that a fingertip
+reaches the rocker's top half without meeting the desk, that the switch's
+clips have a web they can grab and room to spring into, that the jack sits in
+its wall with the nut on flat plastic and nothing touching, that a driver can
 reach every screw, and that both parts print flat with nothing overhanging.
 Each is measured against the solids and the hardware modelled beside them,
 not against the arithmetic that placed them.
@@ -19,22 +20,23 @@ from build123d import Box, Cylinder, Pos, Rot
 from p2s import profiles
 from parts.desk_switch import (
     BRIDGE,
-    GSW_117,
-    GSW_123,
+    KCD4,
+    KCD4_26,
     MAX_LEAN,
     Params,
     _lid_in_place,
     assembly,
-    finger,
+    clips,
+    coupon,
+    desk,
+    fingertip,
     jack_body,
     lid,
     screw_heads,
     shell,
     switch_body,
-    switch_nut,
+    switch_front,
     teardrop,
-    toggle,
-    toggle_sweep,
 )
 
 NOZZLE = 0.4
@@ -80,22 +82,23 @@ def _lean(part):
 # --- the finger ------------------------------------------------------------
 
 
-def test_a_finger_fits_between_the_thrown_bat_and_the_desk(params, box):
-    """The one number the whole height follows from. A finger-thick cylinder
-    lying along the desk in front of the box clears the bat at the top of its
-    throw, the nut, and the box itself."""
-    probe = finger(params)
-    assert _touch(probe, toggle_sweep(params)) == pytest.approx(0, abs=1e-6)
-    assert _touch(probe, switch_nut(params)) == pytest.approx(0, abs=1e-6)
+def test_a_fingertip_reaches_the_top_half_without_meeting_the_desk(params, box):
+    """Up is the top half, right under the desk's edge. A fingertip pointed at
+    the middle of it clears the desk and the box, and lands on the rocker."""
+    probe = fingertip(params)
+    assert _touch(probe, desk(params)) == pytest.approx(0, abs=1e-6)
     assert _touch(probe, box) == pytest.approx(0, abs=1e-6)
-    # And it is exactly that: the bat's highest point is ``finger`` down.
-    assert params.handle_top == pytest.approx(params.finger)
+    cl = params.switch.cutout[1]
+    assert params.axis_depth - cl / 2 < params.press_depth < params.axis_depth
+    # Nudged forward, it is on the rocker: nothing else is in the way.
+    pushed = Pos(0, 1.0, 0) * probe
+    assert _touch(pushed, switch_front(params)) > 0
 
 
-def test_the_bat_thrown_down_stays_clear_of_the_lid(params, cover_in_place):
-    down = toggle(params, params.switch.throw)
-    assert _touch(down, cover_in_place) == pytest.approx(0, abs=1e-6)
-    assert down.bounding_box().max.Z < params.height
+def test_the_bezel_is_below_the_desk_by_the_headroom(params):
+    bb = switch_front(params).bounding_box()
+    assert bb.min.Z == pytest.approx(params.headroom)
+    assert _touch(switch_front(params), desk(params)) == pytest.approx(0, abs=1e-6)
 
 
 # --- the switch ------------------------------------------------------------
@@ -106,51 +109,63 @@ def test_the_switch_sits_in_the_wall_touching_nothing(params, box, cover_in_plac
     assert _touch(body, box) == pytest.approx(0, abs=1e-6)
     assert _touch(body, cover_in_place) == pytest.approx(0, abs=1e-6)
     assert _touch(body, jack_body(params)) == pytest.approx(0, abs=1e-6)
-    assert _touch(switch_nut(params), box) == pytest.approx(0, abs=1e-6)
-    assert _touch(toggle_sweep(params), box) == pytest.approx(0, abs=1e-6)
+    assert _touch(switch_front(params), box) == pytest.approx(0, abs=1e-6)
+    # Air under the body before the lid's lip.
+    assert body.bounding_box().max.Z + params.clearance <= params.height - params.lip + 1e-6
 
 
-def test_the_nut_bears_on_flat_wall_and_covers_the_teardrop(params, box):
-    """The bushing's clamp is what makes the switch feel solid. Inside the
-    nut's circle the wall is whole except for the hole itself, and outside the
-    face nothing stands proud for the nut to rock on."""
+def test_the_bezel_bears_on_flat_wall_all_round_the_cutout(params, box):
+    """The bezel is what a press pushes on. Behind its footprint the face is
+    whole plastic except for the cutout, and nothing stands proud of it."""
+    (bw, bl), (cw, cl) = params.switch.bezel, params.switch.cutout
+    skin = Pos(0, 0.25, params.axis_depth) * Box(bw, 0.5, bl)
+    assert _touch(box, skin) == pytest.approx(skin.volume * (1 - cw * cl / (bw * bl)), rel=1e-3)
+    proud = Pos(0, -0.5, params.axis_depth) * Box(bw + 4, 1.0, bl + 4)
+    assert _touch(box, proud) == pytest.approx(0, abs=1e-6)
+
+
+def test_the_clips_grab_a_web_they_were_made_for(params, box):
+    """Through the cutout's ends the wall is ``clip_panel`` thick and no more,
+    and that is inside the range the clips grab."""
     sw = params.switch
-    r = sw.nut_corners / 2
-    inside = Pos(0, 0.25, params.axis_depth) * Rot(90, 0, 0) * Cylinder(r, 0.5)
-    hole = teardrop(sw.hole).area
-    assert _touch(box, inside) / inside.volume == pytest.approx(
-        1 - hole / (math.pi * r * r), rel=0.02
-    )
-    outside = Pos(0, -0.5, params.axis_depth) * Rot(90, 0, 0) * Cylinder(r * 1.5, 1.0)
-    assert _touch(box, outside) == pytest.approx(0, abs=1e-6)
-    # The teardrop's flat is within the nut's reach, not out past it.
-    assert sw.hole / 2 * math.sqrt(2) - BRIDGE / 2 < r + 1.0
+    cw, cl = sw.cutout
+    lo, hi = sw.panel_range
+    assert lo <= params.clip_panel <= hi
+    for s in (-1, 1):
+        z = params.axis_depth + s * (cl / 2 + sw.clips / 2)
+        web = Pos(0, params.clip_panel / 2, z) * Box(cw - 4.0, params.clip_panel - 0.02, 0.5)
+        assert _touch(box, web) == pytest.approx(web.volume, rel=1e-3)
+        behind = Pos(0, params.clip_panel + 0.5, z) * Box(cw - 4.0, 0.9, 0.5)
+        assert _touch(box, behind) == pytest.approx(0, abs=1e-6)
 
 
-def test_the_bushing_has_thread_to_spare(params):
-    sw = params.switch
-    stack = params.panel + sw.washer + sw.nut_thickness
-    assert sw.bushing_length - stack >= 1.0
-    with pytest.raises(ValueError, match="thread"):
-        shell(Params(panel=8.0))
+def test_the_clips_spring_out_into_air(params, box, cover_in_place):
+    assert _touch(clips(params), box) == pytest.approx(0, abs=1e-6)
+    assert _touch(clips(params), cover_in_place) == pytest.approx(0, abs=1e-6)
 
 
-def test_the_tab_hole_is_on_the_desk_side_and_clear_of_the_bushing(params, box):
-    sw = params.switch
-    z = params.axis_depth - sw.tab_offset
-    assert z < params.axis_depth
-    pin = Pos(0, params.panel / 2, z) * Rot(90, 0, 0) * Cylinder(sw.tab_hole / 2 - 0.1, params.panel + 2)
-    assert _touch(box, pin) == pytest.approx(0, abs=1e-6)
-    # And the wall between the two holes is still wall.
-    between = Pos(0, params.panel / 2, (z + sw.tab_hole / 2 + params.axis_depth - sw.hole / 2) / 2) * Box(1.0, params.panel, 0.4)
-    assert _touch(box, between) == pytest.approx(between.volume, rel=1e-3)
+def test_the_wall_away_from_the_switch_is_full_thickness(params, box):
+    """The pocket is a strip round the switch, not the whole front."""
+    pw, _ = params.pocket
+    x = pw / 2 + 2.0
+    full = Pos(x, params.panel / 2, params.height / 2) * Box(1.0, params.panel - 0.02, params.height - 2)
+    assert _touch(box, full) == pytest.approx(full.volume, rel=1e-3)
 
 
-def test_the_dpdt_switch_drops_into_the_same_box(params, box):
-    """GSW-123 is the same body in the same hole, and the one that actually
-    reverses a motor."""
-    assert GSW_123.hole == GSW_117.hole and GSW_123.body_length == GSW_117.body_length
-    assert shell(Params(switch=GSW_123)).volume == pytest.approx(box.volume)
+def test_the_smaller_kcd4_drops_into_the_same_box_design(params):
+    """The 26 x 22 cutout is the other common one; it only moves the hole."""
+    other = Params(switch=KCD4_26)
+    assert shell(other).is_valid
+    assert other.height < params.height
+
+
+def test_the_coupon_is_the_front_of_the_shell(params, box):
+    """Same cutout, same web, same way up: what fits it fits the box."""
+    c = coupon(params)
+    assert c.is_valid and len(c.solids()) == 1
+    assert c.bounding_box().size.Z == pytest.approx(params.height)
+    assert c.bounding_box().size.Y < params.panel + params.boss + 1.5
+    assert _touch(c, box) == pytest.approx(c.volume, rel=1e-4)
 
 
 # --- the jack and the lead -------------------------------------------------
@@ -246,24 +261,24 @@ def test_the_printed_lid_is_the_same_part_turned_over(params, cover, cover_in_pl
 
 
 def test_nothing_in_the_shell_overhangs_past_what_fdm_bridges(params, box):
-    """Rim-down, every wall hole is a teardrop and every flange is on the
-    plate. What is left leaning past 45 degrees is the top of the 2.8mm tab
-    hole, which is round because its own teardrop would be smaller than it,
-    and the flats are the 2mm bridges across the teardrops' tips."""
+    """Rim-down, the jack hole is a teardrop and every flange is on the
+    plate. The flats are the 2mm bridges across the teardrop's tip and the
+    one across the far end of the rocker's cutout, which spans only the web."""
     tri, on_plate, lean = _lean(box)
     centre = tri.mean(axis=1)
-    sw = params.switch
+    cw, cl = params.switch.cutout
 
     flat = (~on_plate) & (lean > 89)
     spans = tri[flat][:, :, 0].max(axis=1) - tri[flat][:, :, 0].min(axis=1)
-    assert spans.max() <= BRIDGE + 1e-6
+    cutout_end = (
+        (np.abs(centre[flat][:, 2] - (params.axis_depth + cl / 2)) < 1e-3)
+        & (centre[flat][:, 1] < params.clip_panel + 1e-6)
+    )
+    assert spans[~cutout_end].max() <= BRIDGE + 1e-6
+    assert cutout_end.any() and spans[cutout_end].max() <= cw + 1e-6
 
     sloped = (~on_plate) & (lean > 5.0) & (lean <= 89)
-    steep = sloped & (lean > MAX_LEAN + 0.5)
-    tab = np.array([0.0, params.axis_depth - sw.tab_offset])
-    off = np.linalg.norm(centre[steep][:, [0, 2]] - tab, axis=1)
-    assert off.max() <= sw.tab_hole / 2 + 0.1, "something other than the tab hole overhangs"
-    assert (centre[steep][:, 1] < params.panel + 1e-6).all()
+    assert lean[sloped].max() <= MAX_LEAN + 0.5
 
 
 def test_nothing_in_the_lid_overhangs_past_what_fdm_bridges(cover):
@@ -276,7 +291,7 @@ def test_nothing_in_the_lid_overhangs_past_what_fdm_bridges(cover):
 
 def test_the_walls_are_thicker_than_two_extrusions(params):
     lw = profiles.machine(NOZZLE).line_width
-    assert min(params.wall, params.lid, params.panel) >= 2 * lw
+    assert min(params.wall, params.lid, params.clip_panel) >= 2 * lw
 
 
 def test_a_plate_of_both_parts_fits_the_bed(box, cover):
@@ -304,31 +319,41 @@ def test_the_box_is_the_size_the_arithmetic_says(params, box):
 # --- the parameter guards --------------------------------------------------
 
 
-def test_a_gap_no_finger_fits_is_rejected():
-    with pytest.raises(ValueError, match="finger"):
-        shell(Params(finger=10))
+def test_a_switch_so_close_to_the_desk_no_finger_fits_is_rejected():
+    with pytest.raises(ValueError, match="fingertip"):
+        shell(Params(headroom=3.0, finger=40.0))
 
 
-def test_a_hole_the_bushing_will_not_pass_is_rejected():
+def test_a_web_the_clips_cannot_grab_is_rejected():
+    with pytest.raises(ValueError, match="clips grab"):
+        shell(Params(clip_panel=3.5))
+
+
+def test_a_cutout_the_body_will_not_pass_is_rejected():
     from dataclasses import replace
 
     with pytest.raises(ValueError, match="will not pass"):
-        shell(Params(switch=replace(GSW_117, hole=12.0)))
+        shell(Params(switch=replace(KCD4, cutout=(21.0, 30.2))))
+
+
+def test_a_box_too_shallow_to_wire_is_rejected():
+    with pytest.raises(ValueError, match="wiring"):
+        shell(Params(depth=38.0))
 
 
 def test_a_box_too_narrow_for_the_switch_is_rejected():
     with pytest.raises(ValueError, match="wider"):
-        shell(Params(width=30))
+        shell(Params(width=34))
 
 
 def test_a_jack_over_the_switch_body_is_rejected():
     with pytest.raises(ValueError, match="over the switch body"):
-        shell(Params(jack_x=5.0, notch_x=-16.0))
+        shell(Params(jack_x=12.0))
 
 
 def test_a_jack_in_the_corner_post_is_rejected():
     with pytest.raises(ValueError, match="corner post"):
-        shell(Params(jack_x=30.0))
+        shell(Params(jack_x=28.0))
 
 
 def test_a_jack_in_the_flange_is_rejected():
@@ -338,7 +363,7 @@ def test_a_jack_in_the_flange_is_rejected():
 
 def test_a_jack_and_lead_on_the_same_side_are_rejected():
     with pytest.raises(ValueError, match="opposite"):
-        shell(Params(notch_x=16.0))
+        shell(Params(notch_x=20.5))
 
 
 def test_a_flange_with_no_room_for_a_screw_head_is_rejected():
@@ -347,5 +372,5 @@ def test_a_flange_with_no_room_for_a_screw_head_is_rejected():
 
 
 def test_a_lid_validates_the_same_way():
-    with pytest.raises(ValueError, match="finger"):
-        lid(Params(finger=10))
+    with pytest.raises(ValueError, match="clips grab"):
+        lid(Params(clip_panel=0.9))
