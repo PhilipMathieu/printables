@@ -3,33 +3,29 @@
 Four things decide whether this works, and none of them is visible in a render:
 that the hole the bag goes into is a hole and not a hook, that the funnel stops
 each bundle of handles at its own size and none of them at the bottom, that
-there is no corner anywhere inside the aperture, and that the collar comes off
-the plate turning and cannot be lifted out. Each is measured off the built
-solid rather than trusted to the arithmetic that made it.
+there is no corner anywhere inside the aperture, and that a mini carabiner goes
+through the loop and hangs it plumb. Each is measured off the built solid
+rather than trusted to the arithmetic that made it.
 """
 
 from __future__ import annotations
 
 import math
-from fractions import Fraction
 
 import numpy as np
 import pytest
-from build123d import Box, CenterOf, Cylinder, Pos, Rot
+from build123d import Box, CenterOf, Cylinder, Pos
 
-from geom import webbing
 from p2s import profiles
 from parts.bag_holder import (
     MAX_FUNNEL,
-    MAX_LEAN,
+    MINI_GATE,
+    MINI_ROD,
     MIN_SLOT,
     MIN_WALL,
     Params,
-    _swell,
     aperture,
-    body,
     build,
-    collar,
     profile,
 )
 
@@ -41,20 +37,9 @@ quoted to it."""
 
 
 @pytest.fixture(scope="module")
-def fixed():
-    """The body that does not turn. Built once: the top break is a stack of
-    boolean insets and it is not cheap."""
-    return body(Params())
-
-
-@pytest.fixture(scope="module")
-def turning():
-    return collar(Params())
-
-
-@pytest.fixture(scope="module")
-def holder(fixed, turning):
-    return fixed + turning
+def holder():
+    """Built once: the breaks are a stack of boolean insets and not cheap."""
+    return build(Params())
 
 
 @pytest.fixture(scope="module")
@@ -82,7 +67,7 @@ def _rests_at(part, params: Params, across: float) -> float:
 
 
 def _radius_at(solid, z: float) -> float:
-    """Outermost radius of a body of revolution at one height."""
+    """Half the width of a solid at one height."""
     cut = solid & (Pos(0, 0, z) * Box(400, 400, 0.02))
     return cut.bounding_box().size.X / 2 if cut.volume > 1e-12 else 0.0
 
@@ -102,123 +87,69 @@ def _wire_points(wire, samples: int) -> np.ndarray:
 # --- the hole is a hole ----------------------------------------------------
 
 
-def test_the_profile_is_one_face_with_one_hole_in_it():
-    """The whole retention argument, and the check that the head landed on the
-    shoulders rather than beside them. One closed inner wire: the aperture. A
-    hook would not be closed, and two faces would mean the neck missed."""
+def _holes(face):
+    """The aperture and the loop's bore, biggest first."""
+    return sorted(face.inner_wires(), key=lambda w: w.length, reverse=True)
+
+
+def test_the_profile_is_one_face_with_two_holes_in_it():
+    """The whole retention argument, and the check that the loop landed on the
+    crown rather than beside it. Two closed inner wires: the aperture and the
+    loop's bore. A hook would not be closed, and two faces would mean the neck
+    missed."""
     face = profile(Params()).faces()[0]
     assert len(profile(Params()).faces()) == 1
-    assert len(face.inner_wires()) == 1
+    assert len(face.inner_wires()) == 2
 
 
-def test_the_ribbon_is_never_thinner_than_one_wall(holder):
-    """Which is what says the aperture is walled the whole way round, and that
-    the ribbon really is a constant-width offset and not a shape with a hole
-    roughly in the middle of it."""
+def test_the_ribbon_is_never_thinner_than_one_wall():
+    """Which is what says the aperture and the loop are walled the whole way
+    round, that the ribbon really is a constant-width offset and not a shape
+    with a hole roughly in the middle of it, and that the loop's bore and the
+    aperture never come closer to each other than to the outside."""
     params = Params()
     face = profile(params).faces()[0]
-    inner = face.inner_wires()[0]
-    across = _wire_points(inner, 900)[:, None, :] - _wire_points(
-        face.outer_wire(), 2400
-    )[None, :, :]
-    assert np.linalg.norm(across, axis=2).min() == pytest.approx(params.wall, abs=0.02)
+    outer = _wire_points(face.outer_wire(), 2400)
+    aperture_, bore = (_wire_points(w, 900) for w in _holes(face))
+
+    def closest(a, b):
+        return np.linalg.norm(a[:, None, :] - b[None, :, :], axis=2).min()
+
+    assert closest(aperture_, outer) == pytest.approx(params.wall, abs=0.02)
+    assert closest(bore, outer) == pytest.approx(params.wall, abs=0.02)
+    assert closest(bore, aperture_) >= params.wall
 
 
-# --- the webbing -----------------------------------------------------------
+# --- the loop ------------------------------------------------------------
 
 
-@pytest.mark.parametrize("strap", webbing.CATALOGUE.values(), ids=webbing.CATALOGUE)
-def test_a_width_is_the_inches_it_is_sold_as(strap):
-    """The width is the one number a lead is actually held to -- it is woven on
-    a loom -- so it has to be the nominal size converted, not a caliper reading.
-    Thickness is the caliper reading, and runs thick on purpose."""
-    inches = float(Fraction(strap.nominal.split()[0]))
-    assert strap.width == pytest.approx(inches * webbing.MM_PER_INCH)
-    assert strap.handle == pytest.approx(2 * strap.thickness)
-
-
-def test_an_unknown_width_says_what_there_is():
-    with pytest.raises(KeyError, match="standard"):
-        webbing.named("paracord")
-
-
-# --- the swivel ------------------------------------------------------------
-
-
-def test_the_collar_and_the_body_are_two_free_bodies(holder, fixed, turning):
-    """Printed in one go on one plate, touching nowhere. If they touched they
-    would fuse, and a fused swivel is a lump."""
-    assert len(holder.solids()) == 2
-    assert (fixed & turning).volume == pytest.approx(0, abs=1e-9)
-
-
-@pytest.mark.parametrize("turn", [7.0, 45.0, 90.0, 180.0])
-def test_the_collar_turns(fixed, turning, turn):
-    """Which is the whole point of it. Spun to any angle it still touches
-    nothing, because both it and its socket are surfaces of revolution."""
-    assert (fixed & (Rot(0, 0, turn) * turning)).volume == pytest.approx(0, abs=1e-9)
-
-
-def test_the_collar_cannot_be_lifted_out_of_its_socket(turning):
-    """It is fatter in the middle than either end of the hole it sits in, which
-    is the only thing holding it in and the reason the swell has to lean."""
+def test_the_loop_takes_a_mini_carabiner_s_rod_with_room_to_swing(holder):
+    """A rod in the bore touches nothing even pushed against the bottom of it,
+    with a millimetre to spare -- the slack that lets the holder pivot on it
+    rather than hang however it was last pushed."""
     params = Params()
-    socket = _swell(params.socket_radius, params)
-    fat = _radius_at(turning, params.band / 2)
-    # Either end is a way out, so what holds it is the narrower of the two --
-    # and both are drawn in by their own break, which is why breaking the plate
-    # edge buys catch rather than costing it.
-    mouth = max(_radius_at(socket, 0.02), _radius_at(socket, params.band - 0.02))
-    assert fat > mouth
-    assert fat - mouth == pytest.approx(params.engagement, abs=0.05)
-    assert params.engagement > params.interlock - params.gap
+    rod = MINI_ROD / 2
+    for y in (params.eye_radius - rod - 0.01, -(params.eye_radius - rod - 0.01)):
+        pin = Pos(0, y, params.band / 2) * Cylinder(rod, params.band * 3)
+        assert (holder & pin).volume == pytest.approx(0, abs=1e-6)
+    assert params.eye - MINI_ROD >= 1
 
 
-def test_the_gap_is_the_same_at_every_height(turning):
-    """The one number that decides whether it comes off the plate turning. Both
-    surfaces are the same profile shifted radially, so it has to be -- measured
-    here rather than assumed, because a loft would not have been."""
+def test_the_loop_s_ribbon_goes_through_a_mini_carabiner_s_gate():
+    """It has to go in sideways to be clipped on at all, and the section the
+    gate has to pass is the ribbon's own, because the loop is the same ribbon
+    as the rest."""
     params = Params()
-    socket = _swell(params.socket_radius, params)
-    # The whole height, breaks included: both are the same chain of faces
-    # shifted radially, so there is nowhere the gap is allowed to be anything
-    # else. Before the breaks went into the profile this could only be asked
-    # below them, because the collar was chamfered where its socket was not.
-    for z in np.linspace(0.02, params.band - 0.02, 11):
-        gap = _radius_at(socket, z) - _radius_at(turning, z)
-        assert gap == pytest.approx(params.gap, abs=0.02), f"at z={z:.2f}"
+    assert min(params.wall, params.band) < MINI_GATE
 
 
-def test_the_collar_passes_the_lead_s_folded_handle(turning):
-    """The only way onto a lead that does not go past the snap hook.
-
-    With room around it, on purpose. The first print went on but did not go on
-    easily: working a fold through takes room in proportion to the strap, which
-    is what ``slot_ease`` is, so this asserts the ease is really there rather
-    than asserting the slot is tight.
-    """
+def test_the_loop_is_on_the_axis_above_everything_else(holder):
+    """The loop is the one place it hangs from, so it has to be the top of the
+    part and centred over the opening."""
     params = Params()
-    handle = Box(
-        params.strap.width, params.strap.stack(params.plies), params.band * 3
-    )
-    assert (turning & handle).volume == pytest.approx(0, abs=1e-6)
-    assert params.slot_width == pytest.approx(
-        (params.strap.width + params.slot_clearance) * params.slot_ease
-    )
-    assert params.slot_height == pytest.approx(
-        (params.strap.handle + params.slot_clearance) * params.slot_ease
-    )
-    assert params.slot_width > params.strap.width * 1.4
-
-
-def test_a_wider_lead_changes_the_collar_and_the_head_and_nothing_else():
-    """The opening holds a bag, and a bag is the same size whatever the dog is
-    on. So only the top of the part knows what the lead is."""
-    sized = [Params().for_strap(name) for name in webbing.CATALOGUE]
-    assert len({(p.belly, p.slot, p.funnel, round(p.seats(20.0) - p.belly_y, 9))
-                for p in sized}) == 1
-    radii = [p.collar_radius for p in sized]
-    assert radii == sorted(radii)
+    bb = holder.bounding_box()
+    assert bb.max.Y == pytest.approx(params.eye_outer, abs=1e-3)
+    assert bb.min.X == pytest.approx(-bb.max.X, abs=1e-3)
 
 
 # --- the funnel ------------------------------------------------------------
@@ -296,7 +227,7 @@ def test_the_aperture_has_no_corner_to_snag_or_crack_at():
     and the tangent has to turn no faster than the tightest arc in it does --
     an unblended corner there would turn a whole ``funnel`` at one step."""
     params = Params()
-    inner = profile(params).faces()[0].inner_wires()[0]
+    inner = _holes(profile(params).faces()[0])[0]
     samples = 3000
     tangents = np.array(
         [(v.X, v.Y) for v in (inner.tangent_at(i / samples) for i in range(samples))]
@@ -315,9 +246,10 @@ def test_the_aperture_has_no_corner_to_snag_or_crack_at():
 
 
 def test_nothing_overhangs_past_what_fdm_bridges(holder):
-    """Two things in the part lean at all: the plate break, which is a 45 degree
-    chamfer and so sits exactly on the line FDM holds, and the swivel's swell,
-    which is shallower. Everything else is a profile extruded straight up."""
+    """Nothing in the part leans at all. It is a profile extruded straight up,
+    and both breaks are staircases a layer to a step rather than chamfers, so
+    every facet is either vertical or flat. The swivel's swell was the only
+    sloped thing it ever had."""
     from tools.render import mesh
 
     params = Params()
@@ -326,7 +258,7 @@ def test_nothing_overhangs_past_what_fdm_bridges(holder):
     n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
     n /= np.linalg.norm(n, axis=1, keepdims=True)
     # Overhang is a downward-facing surface, so the sign matters: the top break
-    # leans as far as the swell does and faces the other way, which is free.
+    # leans as far as the plate break does and faces the other way, which is free.
     on_plate = tri[:, :, 2].max(axis=1) < 1e-6
     lean = np.degrees(np.arcsin(np.clip(-n[:, 2], -1, 1)))
     centre = tri.mean(axis=1)
@@ -344,17 +276,8 @@ def test_nothing_overhangs_past_what_fdm_bridges(holder):
     # excluded above: a flat ring around a curve triangulates a degree or two
     # off level, and those facets are the ledges seen edge on.
     sloped = (~on_plate) & (lean > 5.0) & (lean <= 89)
-    assert lean[sloped].max() <= MAX_LEAN + 0.5
-
-    # And every sloped facet is one of exactly three things: the collar's
-    # underside, the socket's roof, or a 45 degree break. The two cone angles
-    # differ because the swell rises out of the plate break at one end and into
-    # the top break at the other, and each body sees the half that overhangs.
-    known = (params.lean, params.ceiling, 45.0)
-    off = np.min(np.abs(lean[sloped][:, None] - np.array(known)[None, :]), axis=1)
-    assert off.max() < 0.5, (
-        f"a facet leans {lean[sloped][off.argmax()]:.1f} degrees, which is none "
-        f"of {known}"
+    assert not sloped.any(), (
+        f"a facet leans {lean[sloped].max():.1f} degrees in a part with no slopes"
     )
 
 
@@ -367,46 +290,39 @@ def test_the_breaks_step_in_one_layer_at_a_time():
         assert depth / steps == pytest.approx(params.slice_height, abs=0.05)
 
 
-def test_the_body_is_its_profile_extruded_less_the_socket(holder, fixed):
+def test_the_part_is_its_profile_extruded(holder):
     """Which is the claim the lean test rests on, so it is worth making
-    separately: no draft, no feature in the fixed body that is not either in
-    the drawing or the hole the collar turns in.
+    separately: no draft, no feature that is not in the drawing.
 
-    Measured on a slice below the top break rather than on the volume, now that
-    the break takes a chamfer's worth off the top.
+    Measured on a slice between the breaks rather than on the volume, since
+    the breaks take a chamfer's worth off both ends.
     """
     params = Params()
     face = profile(params).faces()[0]
-    # Between the two breaks, where the body really is its own profile.
-    z = (params.base_break + params.band / 2) / 2
-    socket_r = params.socket_radius + params.interlock * (
-        (z - params.base_break) / (params.band / 2 - params.base_break)
-    )
-    assert _area_at(fixed, z) == pytest.approx(
-        face.area - math.pi * socket_r**2, rel=1e-3
-    )
+    for z in np.linspace(params.base_break + 0.05, params.band - params.edge_break - 0.05, 4):
+        assert _area_at(holder, z) == pytest.approx(face.area, rel=1e-3)
     assert holder.bounding_box().size.Z == pytest.approx(params.band)
 
 
-def test_the_ribbon_s_section_is_an_octagon(fixed):
+def test_the_ribbon_s_section_is_an_octagon(holder):
     """Broken at both ends rather than one, which is what a print asked for: a
     single chamfer on the top does not read as rounded in the hand.
 
-    The widest thing in the body is the head, so measuring its half width at
+    The widest thing in the part is the belly, so measuring its half width at
     three heights measures the section: drawn in one chamfer at the plate, full
     width through the middle, drawn in the other at the top.
     """
     params = Params()
     middle = (params.base_break + params.band / 2) / 2
-    full = _radius_at(fixed, middle)
-    assert _radius_at(fixed, 0.02) == pytest.approx(
+    full = _radius_at(holder, middle)
+    assert _radius_at(holder, 0.02) == pytest.approx(
         full - params.base_break, abs=0.05
     )
-    assert _radius_at(fixed, params.band - 0.02) == pytest.approx(
+    assert _radius_at(holder, params.band - 0.02) == pytest.approx(
         full - params.edge_break, abs=0.05
     )
-    assert _area_at(fixed, 0.02) < _area_at(fixed, middle)
-    assert _area_at(fixed, params.band - 0.02) < _area_at(fixed, middle)
+    assert _area_at(holder, 0.02) < _area_at(holder, middle)
+    assert _area_at(holder, params.band - 0.02) < _area_at(holder, middle)
 
 
 def test_the_ribbon_is_thicker_than_two_extrusions():
@@ -424,23 +340,22 @@ def test_a_plate_of_them_fits_the_bed():
 # --- how it hangs ----------------------------------------------------------
 
 
-def test_the_body_hangs_plumb_under_the_collar(fixed):
-    """Which is what the swivel buys. The collar goes where the lead puts it;
-    the body turns under it until its own weight is below the joint, and its
-    weight is below the joint from every angle because it is all below it."""
+def test_it_hangs_plumb_under_the_loop(holder):
+    """Which is what the carabiner buys. Hung from the top of the loop's bore
+    it pivots until its weight is under the rod, and its weight is on the axis
+    and well below the rod, so plumb is with the funnel pointing up."""
     params = Params()
-    centre = fixed.center(CenterOf.MASS)
+    centre = holder.center(CenterOf.MASS)
     # A micron of slack for the solver: the profile is mirror-symmetric by
-    # construction, but the top break is cut by a stack of booleans and mass
-    # properties come back a hair off centre.
-    assert centre.X == pytest.approx(0, abs=1e-3)
-    assert centre.Y < -params.head_radius
+    # construction, but the breaks are cut by a stack of booleans and mass
+    # properties come back a few microns off centre.
+    assert centre.X == pytest.approx(0, abs=5e-3)
+    assert centre.Y < params.crown_y
 
 
-def test_both_bodies_are_sound(holder):
+def test_it_is_one_sound_body(holder):
     assert holder.is_valid
-    assert all(s.is_valid for s in holder.solids())
-    assert len(holder.solids()) == 2
+    assert len(holder.solids()) == 1
 
 
 # --- the parameter guards --------------------------------------------------
@@ -451,26 +366,19 @@ def test_a_ribbon_of_one_extrusion_is_rejected():
         build(Params(wall=MIN_WALL / 2))
 
 
-def test_a_swell_the_gap_swallows_is_rejected():
-    """Now that the breaks carry part of the catch it takes more to lose it:
-    the swell has to give up more than the shallower break puts back."""
-    with pytest.raises(ValueError, match="lifts straight out"):
-        build(Params(interlock=0.2, gap=0.5, base_break=0.1))
-
-
-def test_a_swell_too_steep_to_print_is_rejected():
-    with pytest.raises(ValueError, match="off vertical"):
-        build(Params(interlock=6.0))
-
-
-def test_a_joint_that_reaches_the_socket_is_rejected():
-    with pytest.raises(ValueError, match="into the collar's socket"):
+def test_a_joint_that_reaches_the_bore_is_rejected():
+    with pytest.raises(ValueError, match="into its bore"):
         build(Params(joint=4.0))
 
 
-def test_a_collar_that_passes_no_webbing_is_rejected():
-    with pytest.raises(ValueError, match="hole in a hook"):
-        build(Params(plies=0))
+def test_a_loop_too_tight_for_the_rod_is_rejected():
+    with pytest.raises(ValueError, match="no room to swing"):
+        build(Params(eye=MINI_ROD + 0.5))
+
+
+def test_a_ribbon_too_fat_for_the_gate_is_rejected():
+    with pytest.raises(ValueError, match="carabiner gate"):
+        build(Params(wall=MINI_GATE, band=MINI_GATE))
 
 
 def test_a_throat_that_has_to_be_threaded_is_rejected():
@@ -498,21 +406,12 @@ def test_breaks_that_eat_the_whole_ribbon_are_rejected():
         build(Params(edge_break=3.0))
 
 
-def test_a_break_that_swallows_the_swell_is_rejected():
-    with pytest.raises(ValueError, match="no waist"):
-        build(Params(edge_break=2.2))
+def test_breaks_that_meet_across_the_band_are_rejected():
+    with pytest.raises(ValueError, match="no side wall"):
+        build(Params(edge_break=1.6, base_break=1.6, band=3.0))
 
 
 def test_a_negative_break_is_rejected():
     with pytest.raises(ValueError, match="burr"):
         build(Params(base_break=-0.2))
 
-
-def test_an_ease_that_shrinks_the_slot_is_rejected():
-    with pytest.raises(ValueError, match="smaller than"):
-        build(Params(slot_ease=0.9))
-
-
-def test_a_slot_radiused_away_to_nothing_is_rejected():
-    with pytest.raises(ValueError, match="no flat"):
-        build(Params(slot_corner=6.0))

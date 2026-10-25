@@ -6,13 +6,12 @@
 Almost nobody needs to touch any of it. ``--slot`` is the one worth trying a
 second value of, because it is what decides how hard the handles are pinched,
 and how tightly a knotted bag ties is a thing about the bags you buy. After
-that, ``--gap`` if the swivel comes off the plate fused or turns stiffly, and
-``--strap`` if the lead is not a 3/4 inch one.
+that, ``--eye`` if the carabiner to hand has a stouter rod than most.
 
 It is written in ASA unless told otherwise. This is an outdoor part on a lead:
-UV, cold mornings, and the pavement every time it is dropped. Hang it on a ball
-chain, a split ring or a small carabiner -- the chain is not decoration, it is
-what lets the funnel stay pointing up while the lead does whatever it likes.
+UV, cold mornings, and the pavement every time it is dropped. Clip it on with a
+mini carabiner through the loop -- that is not decoration, it is what lets the
+funnel stay pointing up while the lead does whatever it likes.
 
 The preview is three views: what it looks like printed, the profile that is
 actually the design, and what the funnel does with bundles of handles of
@@ -32,7 +31,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 from matplotlib.patches import Circle as CirclePatch
-from matplotlib.patches import FancyBboxPatch
 from matplotlib.patches import Polygon as MplPolygon
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -40,12 +38,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from build123d import Part, export_stl  # noqa: E402
 
 from p2s import inventory, profiles  # noqa: E402
-from geom import webbing  # noqa: E402
-from parts.bag_holder import Params, build, profile  # noqa: E402
+from parts.bag_holder import MINI_ROD, Params, build, profile  # noqa: E402
 from tools.render import ASA, INK, iso, mesh, plate  # noqa: E402
 
 BAG = "#2f8f5b"
-COLLAR = "#3b6ea5"
+LOOP = "#3b6ea5"
 
 BUNDLES = (26.0, 17.0, 9.0)
 """Bundles of tied handles to draw, in mm across. A single knot in a thin bag
@@ -77,42 +74,26 @@ def _span(ax, y: float, half: float, label: str, colour: str):
             ha="center", va="bottom", zorder=5)
 
 
-def _collar(ax, params: Params) -> None:
-    """The turning body, in its socket, with the lead's slot through it."""
-    ax.add_patch(CirclePatch((0, 0), params.socket_radius, facecolor="white",
-                             edgecolor=INK, lw=0.9, zorder=3))
-    ax.add_patch(CirclePatch((0, 0), params.collar_radius, facecolor=COLLAR,
-                             alpha=0.28, edgecolor=COLLAR, lw=1.3, zorder=4))
-    ax.add_patch(FancyBboxPatch(
-        (-params.slot_width / 2 + params.slot_corner,
-         -params.slot_height / 2 + params.slot_corner),
-        params.slot_width - 2 * params.slot_corner,
-        params.slot_height - 2 * params.slot_corner,
-        boxstyle=f"round,pad={params.slot_corner}", facecolor="white",
-        edgecolor=COLLAR, lw=1.1, zorder=5))
+def _carabiner(ax, params: Params) -> None:
+    """A mini carabiner's rod, in section, hanging the part from the loop's top."""
+    rod = MINI_ROD / 2
+    ax.add_patch(CirclePatch((0, params.eye_radius - rod), rod, facecolor=LOOP,
+                             alpha=0.35, edgecolor=LOOP, lw=1.1, zorder=4))
 
 
 def _design_view(ax, params: Params, face) -> None:
     """The profile, with the three numbers that are the design on it."""
     _outline(ax, face)
-    _collar(ax, params)
+    _carabiner(ax, params)
 
     ax.annotate(
-        f"the collar turns in its socket — printed\nthere, {params.gap:.2f} mm "
-        f"clear at every height,\n{params.engagement:.2f} mm of catch holding it in",
-        xy=(params.collar_radius * 0.74, params.collar_radius * 0.68),
-        xytext=(params.width / 2 + 2, params.head_radius + 7),
-        fontsize=8.5, color=COLLAR, ha="left", va="bottom",
-        arrowprops=dict(arrowstyle="->", color=COLLAR, lw=1,
+        f"a {params.eye:.0f} mm loop for a mini carabiner —\nit pivots on the "
+        f"rod and hangs plumb",
+        xy=(params.eye_outer * 0.75, params.eye_outer * 0.6),
+        xytext=(params.width / 2 - 6, params.eye_outer + 9),
+        fontsize=8.5, color=LOOP, ha="left", va="bottom",
+        arrowprops=dict(arrowstyle="->", color=LOOP, lw=1,
                         connectionstyle="arc3,rad=-0.3"), zorder=6)
-    ax.annotate(
-        f"the handle, folded,\nthrough {params.slot_width:.0f} × "
-        f"{params.slot_height:.0f} mm",
-        xy=(-params.slot_width / 4, 0),
-        xytext=(-params.width / 2 - 2, params.head_radius + 5),
-        fontsize=8.5, color=COLLAR, ha="right", va="bottom",
-        arrowprops=dict(arrowstyle="->", color=COLLAR, lw=1,
-                        connectionstyle="arc3,rad=0.3"), zorder=6)
 
     _span(ax, params.belly_y, params.belly_radius, f"belly {params.belly:.0f} mm", BAG)
     ax.annotate(
@@ -142,7 +123,7 @@ def _design_view(ax, params: Params, face) -> None:
         fontsize=8.5, color=BAG, ha="left", va="center",
         arrowprops=dict(arrowstyle="->", color=BAG, lw=1), zorder=5)
     ax.set_xlim(-params.width / 2 - 30, params.width / 2 + 32)
-    ax.set_ylim(params.aperture_bottom - params.wall - 4, params.head_radius + 26)
+    ax.set_ylim(params.aperture_bottom - params.wall - 26, params.eye_outer + 22)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title("the design", color=INK, fontsize=11)
@@ -151,7 +132,7 @@ def _design_view(ax, params: Params, face) -> None:
 def _holds_view(ax, params: Params, face) -> None:
     """The funnel doing its one job: stopping each bundle at its own size."""
     _outline(ax, face, lw=1.1)
-    _collar(ax, params)
+    _carabiner(ax, params)
     for bundle in BUNDLES:
         y = params.seats(bundle)
         ax.add_patch(CirclePatch((0, y), bundle / 2, facecolor=BAG, alpha=0.45,
@@ -170,7 +151,7 @@ def _holds_view(ax, params: Params, face) -> None:
             fontsize=8.5, color=INK, ha="center", va="top", zorder=5)
 
     ax.set_xlim(-params.width / 2 - 8, params.width / 2 + 24)
-    ax.set_ylim(params.aperture_bottom - params.wall - 26, params.head_radius + 22)
+    ax.set_ylim(params.aperture_bottom - params.wall - 26, params.eye_outer + 22)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title("each bundle stops at its own size", color=INK, fontsize=11)
@@ -202,13 +183,8 @@ def preview(params: Params, dest: Path, part: Part | None = None) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--strap", default="standard",
-                    help=f"lead the collar is cut for: "
-                         f"{', '.join(webbing.CATALOGUE)}")
-    ap.add_argument("--gap", type=float, default=Params.gap,
-                    help="clearance between the collar and its socket")
-    ap.add_argument("--interlock", type=float, default=Params.interlock,
-                    help="how much both swell at mid height, to hold the collar in")
+    ap.add_argument("--eye", type=float, default=Params.eye,
+                    help="bore of the loop the carabiner clips through")
     ap.add_argument("--belly", type=float, default=Params.belly,
                     help="widest part of the opening; the biggest bundle that "
                          "can be pushed in")
@@ -220,9 +196,6 @@ def main(argv: list[str] | None = None) -> int:
                     help="parallel length of the throat")
     ap.add_argument("--cheek", type=float, default=Params.cheek,
                     help="how far the shoulders bow out past a straight flare")
-    ap.add_argument("--slot-ease", type=float, default=Params.slot_ease,
-                    help="multiplies the collar's slot, so a folded handle has "
-                         "room to be worked through")
     ap.add_argument("--edge-break", type=float, default=Params.edge_break,
                     help="chamfer along the top edges")
     ap.add_argument("--base-break", type=float, default=Params.base_break,
@@ -244,11 +217,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     params = Params(
-        strap=webbing.named(args.strap), gap=args.gap, interlock=args.interlock,
-        belly=args.belly, slot=args.slot, funnel=args.funnel, throat=args.throat,
-        cheek=args.cheek, band=args.band, wall=args.wall,
-        slot_ease=args.slot_ease, edge_break=args.edge_break,
-        base_break=args.base_break,
+        eye=args.eye, belly=args.belly, slot=args.slot, funnel=args.funnel,
+        throat=args.throat, cheek=args.cheek, band=args.band, wall=args.wall,
+        edge_break=args.edge_break, base_break=args.base_break,
     )
     holders = [build(params) for _ in range(args.copies)]
     part = holders[0] if len(holders) == 1 else plate(holders, nozzle=args.nozzle)
@@ -278,9 +249,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"a {bundle:.0f} mm bundle wedges {below:.0f} mm below the belly")
     print(f"{args.copies} x {params.length:.0f} x {params.width:.0f} mm, wedging "
           f"{lo:.0f}-{hi:.0f} mm bundles")
-    print(f"collar {2 * params.collar_radius:.1f} mm for a {params.strap.nominal} "
-          f"lead, {params.engagement:.2f} mm engagement, leaning "
-          f"{params.lean:.0f} deg")
+    print(f"{params.eye:.1f} mm loop for a mini carabiner")
     bb = part.bounding_box()
     print(f"valid={part.is_valid} {bb.size.X:.1f} × {bb.size.Y:.1f} × "
           f"{bb.size.Z:.1f} mm, {part.volume / 1000:.2f} cm^3")

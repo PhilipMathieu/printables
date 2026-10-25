@@ -93,11 +93,10 @@ From the first print, in ASA on the P2S with four walls and 15% infill:
 
 <img src="docs/bag_holder.png" alt="Bag holder: as printed, the design, and what the funnel does with bundles of different sizes" width="100%">
 
-A doo loop: a collar at the top that the lead's handle threads through, a wide
-opening under it, and that opening funnelled down into a narrow throat. Push
-the tied handles through the opening, pull down, and they wedge where the
-funnel gets to their size. There is no hook, no gate and no catch in it
-anywhere, and nothing to buy.
+A doo loop: a small loop at the top for a mini carabiner, a wide opening under
+it, and that opening funnelled down into a narrow throat. Push the tied handles
+through the opening, pull down, and they wedge where the funnel gets to their
+size. There is no hook, no gate and no catch in it anywhere, and nothing moves.
 
 Retention is that the aperture is *closed*. It is a hole, not a hook, so
 nothing in it can fall out however hard the lead is swung, and the bag comes
@@ -109,45 +108,42 @@ on it, and a 26mm bundle stops 7mm below the belly where a 9mm bundle stops 20.
 
 ```sh
 python -m tools.bag_holder
-python -m tools.bag_holder --strap wide --slot 4 --copies 2
+python -m tools.bag_holder --eye 10 --slot 4 --copies 2
 ```
 
-The collar turns. It is a second body printed inside its own socket in the same
-go, held there because both it and the socket swell at mid height, so its
-widest is wider than either end of the hole it sits in and it cannot be lifted
-out — the fidget's trick, revolved rather than stacked, because unlike a ring
-of nested monotiles this one is round. The gap between them is exactly the same
-at every height, which is what decides whether a print-in-place joint comes off
-the plate turning or comes off fused. It earns its place: the funnel only works
-pointing up, and a collar clamped round webbing points wherever the webbing
-does. One turning joint and the collar goes where the lead puts it while the
-body hangs off it plumb.
+It clips on with a mini carabiner through the loop. The funnel only works
+pointing up, and anything clamped round webbing points wherever the webbing
+does; the last version answered that with a print-in-place swivel between a
+collar on the lead's handle and the body, and in use the swivel turned out not
+to be needed. A carabiner does the same job with nothing to print-in-place:
+the holder pivots on its rod, the carabiner turns on whatever it is clipped
+to, and the funnel hangs plumb. It also comes off the lead with one thumb. The
+loop's bore is 9mm, comfortably over the 4-5mm rod of a keychain-size
+carabiner so it swings freely and never binds, and its ribbon is the same
+3.5 x 4mm as the rest, which goes through any gate worth the name.
 
-Everything but the swivel is a profile extruded straight up. The ribbon is the
-aperture offset outward by one wall, which is how a wire form is made; the hole
-it leaves is a chain of five circles and the tangent hulls between them, so
-there is no corner in it for a thin plastic handle to snag on, bar two that
-turn inward and are filleted instead. Both ends of the section are broken, so
-the ribbon is an octagon rather than a rectangle with two corners off it — cut
-as a stack of insets a layer high rather than as chamfers, because the unions
-that build the aperture leave seams a few thousandths of a millimetre long and
-no chamfer will run across one.
+The whole part is a profile extruded straight up. The ribbon is the aperture
+offset outward by one wall, which is how a wire form is made, and the loop is
+the same ribbon bent round its own bore; the hole it leaves is a chain of five
+circles and the tangent hulls between them, so there is no corner in it for a
+thin plastic handle to snag on, bar two that turn inward and are filleted
+instead -- as are the two where the loop meets the crown. Both ends of the
+section are broken, so the ribbon is an octagon rather than a rectangle with
+two corners off it -- cut as a stack of insets a layer high rather than as
+chamfers, because the unions that build the aperture leave seams a few
+thousandths of a millimetre long and no chamfer will run across one.
 
-Nothing overhangs past 45°, and the test knows exactly what does: every sloped
-facet in either body is within half a degree of one of three angles — the
-collar's underside at 27°, the socket's roof at 32°, or a break at 45. Those
-first two are the same cone seen from opposite sides, because the collar's
-upper half faces the sky while the socket is a cavity closing in over itself.
+Nothing overhangs past 45°, and the test knows exactly what does: the only
+downward-facing slope in the part is the plate break, at 45. Losing the swivel
+gave that back -- the swell that held the collar in its socket was the only
+thing that leaned.
 
-Five of the numbers here came off prints rather than out of the arithmetic. It
-was twice as thick as it needed to be. The collar's slot wanted half again in
-each direction before a folded handle would work through it easily. A rule
-saying the throat had to be deeper than it was wide turned out to be wrong — a
-5mm throat grips fine in 4mm of depth. Breaking the top edge alone still felt
-sharp, so both ends are broken now. And the swivel turned stiffly, which came
-down to a chamfer cut into a rim that was already tapering, a socket that was
-not broken where its collar was, and a swell steep enough to print rough on the
-one face that has to slide.
+Four of the numbers here came off prints rather than out of the arithmetic. It
+was twice as thick as it needed to be. A rule saying the throat had to be
+deeper than it was wide turned out to be wrong -- a 5mm throat grips fine in
+4mm of depth. Breaking the top edge alone still felt sharp, so both ends are
+broken now. And the swivel, once it turned freely, turned out to be doing
+nothing a carabiner could not.
 
 ### Plant clip
 
