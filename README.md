@@ -169,6 +169,48 @@ A clip holds a band of stem diameters a couple of millimetres wide — from its
 mouth, the smallest stem that stays captive, up to its bore, the largest that
 fits. `--set` prints the four sizes that tile the range between them.
 
+### Window shroud
+
+<img src="docs/window_shroud.png" alt="Window shroud: isometric, section up through the tilted lens, and the glass face" width="100%">
+
+Lets an indoor camera look out through a window at night without seeing the
+room, or its own infrared LEDs, reflected in the glass. Cut for a Tapo C100,
+held looking 25° down. It is a wedge pressed against the pane, with the
+camera's face as its sloping back wall, a sleeve that slides over the head and
+a lip its rim sits on. Inside are two chambers, both open on the glass. The
+lens chamber is the convex hull of the picture's footprint on the glass and the
+face round the bezel, so nothing of the shroud can be in the picture; the light
+sensor, port and status light look out through it too. Above it, the LED
+chamber runs straight down from the face to the glass, and a partition between
+the two stops what the glass reflects of the LEDs from reaching the lens.
+
+```sh
+python -m tools.window_shroud --coupon                     # the sleeve band only: check the fit first
+python -m tools.window_shroud                              # the shroud, from the estimated dimensions
+python -m tools.window_shroud --tilt 15 --head-w 56.2 --bezel-d 16.5
+```
+
+The tilt sets most of the shape. The head's top edge reaches the glass first,
+so at 25° the lens sits about 13mm back rather than 4mm, and since the lens is
+close to a fisheye, 117° across the diagonal, its picture then spans about
+81 × 37mm of glass, which is why the part is 97 × 74 × 34mm. It also costs
+night vision: the IR LEDs are only 10mm above the lens, so at 25° the lower
+part of each beam lands inside the picture's footprint and is stopped by the
+partition, which is the point of it but leaves most of the beam's core on
+plastic. At 15° the beams clear it and the part is no wider than the head.
+`validate` refuses tilts where the picture would run along the glass or the
+lens chamber would overhang past 44°, which on a C100 is anything past
+25°. The field of view is sourced from TP-Link. The head is a squircle, not a
+rounded square, fitted to a top-down photo of the camera; its size and the
+face layout are estimates off a product photo, apart from the IR board behind the face, whose
+lens hole, LEDs and light sensor were measured with calipers (see
+`geom/cameras.py`). Every estimate has a flag for a caliper reading. Print it
+glass face down, in matte black PETG or ASA: PLA softens in a sunny window. In
+double glazing, a little LED light can still bounce off the outer pane back
+into the lens chamber; if that shows, turn the camera's infrared off and light
+the yard instead. Turn the status light off in the app, as it sits inside the
+lens chamber.
+
 ### Commemorative coin
 
 <img src="docs/tremblant_coin.png" alt="Coin: obverse, reverse and rim section" width="100%">
@@ -200,7 +242,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and hole saw catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing, hole saw and camera catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
