@@ -171,37 +171,44 @@ fits. `--set` prints the four sizes that tile the range between them.
 
 ### Window shroud
 
-<img src="docs/window_shroud.png" alt="Window shroud: isometric, section through the lens, and the glass face" width="100%">
+<img src="docs/window_shroud.png" alt="Window shroud: isometric, section up through the tilted lens, and the glass face" width="100%">
 
 Lets an indoor camera look out through a window at night without seeing the
-room, or its own infrared LEDs, reflected in the glass. Cut for a Tapo C100.
-It is two tubes pressed against the pane: a skirt that slides over the front
-of the head and blacks out the patch of glass the camera looks through, and a
-short hood from the face round the lens bezel to the glass. The LEDs, light
-sensor and status light sit between the two, looking straight out; what the
-glass reflects of the LEDs lands outside the hood, and the hood's wall stands
-between it and the lens. Three thin ribs, left, right and up, hold the hood
-clear of the C100's IR LEDs (top corners) and its sensor (below), and stop
-short of the face so they shade nothing on it.
+room, or its own infrared LEDs, reflected in the glass. Cut for a Tapo C100,
+held looking 25° down. It is a wedge pressed against the pane, with the
+camera's face as its sloping back wall, a sleeve that slides over the head and
+a lip its rim sits on. Inside are two chambers, both open on the glass. The
+lens chamber is the convex hull of the picture's footprint on the glass and the
+face round the bezel, so nothing of the shroud can be in the picture; the light
+sensor, port and status light look out through it too. Above it, the LED
+chamber runs straight down from the face to the glass, and a partition between
+the two stops what the glass reflects of the LEDs from reaching the lens.
 
 ```sh
 python -m tools.window_shroud --coupon                     # the sleeve band only: check the fit first
 python -m tools.window_shroud                              # the shroud, from the estimated dimensions
-python -m tools.window_shroud --head-w 56.2 --bezel-d 16.5 --standoff 5.5
+python -m tools.window_shroud --tilt 15 --head-w 56.2 --bezel-d 16.5
 ```
 
-The lens is close to a fisheye, 117° across the diagonal, so the hood's mouth
-has to grow by about three millimetres for every millimetre of standoff. Kept
-at 5mm, the whole picture fits inside a tube that only just clears the bezel;
-`validate` refuses standoffs where the hood would cover the face's sensors or
-lean past 40°. The field of view is sourced from TP-Link; the head and face
-layout are estimates off a product photo, apart from the IR board behind the
-face, whose lens hole, LEDs and light sensor were measured with calipers (see
-`geom/cameras.py`). Every estimate
-has a flag for a caliper reading. Print it glass face down, in matte black PETG
-or ASA: PLA softens in a sunny window. In double glazing, a little LED light can
-still bounce off the outer pane back into the hood; if that shows, turn the
-camera's infrared off and light the yard instead.
+The tilt sets most of the shape. The head's top edge reaches the glass first,
+so at 25° the lens sits about 13mm back rather than 4mm, and since the lens is
+close to a fisheye, 117° across the diagonal, its picture then spans about
+84 × 38mm of glass, which is why the part is 100 × 75 × 34mm. It also costs
+night vision: the IR LEDs are only 10mm above the lens, so at 25° the lower
+part of each beam lands inside the picture's footprint and is stopped by the
+partition, which is the point of it but leaves most of the beam's core on
+plastic. At 15° the beams clear it and the part is no wider than the head.
+`validate` refuses tilts where the picture would run along the glass or the
+lens chamber would overhang past 44°, which on a C100 is anything past
+25°. The field of view is sourced from TP-Link; the head and face layout are
+estimates off a product photo, apart from the IR board behind the face, whose
+lens hole, LEDs and light sensor were measured with calipers (see
+`geom/cameras.py`). Every estimate has a flag for a caliper reading. Print it
+glass face down, in matte black PETG or ASA: PLA softens in a sunny window. In
+double glazing, a little LED light can still bounce off the outer pane back
+into the lens chamber; if that shows, turn the camera's infrared off and light
+the yard instead. Turn the status light off in the app, as it sits inside the
+lens chamber.
 
 ### Commemorative coin
 

@@ -7,68 +7,86 @@ than anything in the yard, so the picture goes to a white haze. The cure is the
 one photographers use against shop windows: put the lens right up to the glass
 and black out everything around it.
 
-So this is two tubes, one inside the other, both pressed against the glass.
+THE TILT. The camera is held looking ``tilt`` degrees down through the pane,
+25 by default, which is what a camera on an upstairs sill wants. That decides
+most of the shape. The head's top edge tips towards the glass and its bottom
+edge away, so the shroud is a wedge: thin at the top, deep at the bottom, with
+the camera's face as its sloping back wall. And the lens can come no closer to
+the glass than the top of the head allows, about 14mm on a C100 at 25 degrees,
+where untilted it could sit 4mm off. The C100's lens is close to a fisheye --
+117 degrees across the diagonal -- so the picture's lower corners now meet the
+pane at 75 degrees and the patch of glass the camera looks through is about
+86mm wide, half again as wide as the camera.
 
-THE SKIRT is the outer one. It slides over the front of the camera's head, the
-head's white rim sits on a lip inside it, and its front edge seals against the
-pane. With the skirt in place no room light reaches the patch of glass the
-camera looks through.
+So it is two chambers in one convex body, both open on the glass.
 
-THE HOOD is the inner one, and it is what fixes night vision. It is a short
-black tube that runs from the face panel, around the lens bezel, to the glass.
-Infrared from the LEDs leaves the face outside the hood, goes through the pane
-and lights the yard; what the inner surface of the glass reflects comes back
-outside the hood too, and the hood's wall stands between it and the lens. The
-LEDs, the light sensor and the status light all sit in the space between the
-two tubes, looking straight out, and three thin ribs -- left, right and up --
-hold the hood in place without standing in front of any of them. On the C100
-the IR LEDs are at the top corners and the sensor and a port are below, so the
-diagonals and straight down are taken.
+THE LENS CHAMBER is exactly the space the camera looks through: the convex
+hull of the picture's footprint on the glass and the lower part of the face,
+around the bezel. Nothing of the shroud can be in the picture, because the
+picture is inside a convex hole and the shroud is outside it. The light sensor,
+the port and the status light are on the face below the lens, so they look out
+through this chamber too.
 
-WHY THE LENS SITS SO CLOSE TO THE GLASS. The C100's lens is close to a
-fisheye: 117 degrees across the diagonal. A hood has to be wider than the
-picture at its glass end, and the picture spreads at about 60 degrees off-axis
-at the corners, so every millimetre of standoff widens the hood's mouth by
-three or so. At 5mm the whole picture fits inside a tube that only just clears
-the bezel, which leaves the rest of the face free for the LEDs; at 15mm the
-hood would have to be nearly as wide as the face and would swallow them.
-``standoff`` is the one number to tune, and ``validate`` refuses values where
-the hood would cover the face's sensors or lean past what prints.
+THE LED CHAMBER is the space in front of the face above the lens, where the
+two IR LEDs are. A partition between the chambers runs from the face, just
+above the bezel and below the LEDs, down to the glass. Infrared that the inner
+surface of the pane reflects comes back into the LED chamber and the partition
+stands between it and the lens. On the C100 the LEDs' own axes reach the glass
+right at the partition, since they are only 10mm above the lens on the face and
+the top of the picture rises off the lens axis at 30 degrees, so the lower part
+of each LED's beam lands on the partition rather than the glass. That is the
+light that would otherwise land on the glass inside the picture, where it
+hazes worst; the yard is lit by the upper part.
+
+THE SKIRT is everything outside the chambers: a sleeve that slides over the
+front of the camera's head, a lip inside it that the head's white rim sits on,
+and the wedge's walls down to the glass, which seal the pane against room
+light.
 
 WHAT IT CANNOT FIX. In a double-glazed window a little of the LED light enters
-the inner pane outside the hood, crosses the gap and reflects off the outer
-pane's surfaces, and comes back in through the hood's mouth. On low-e glass in
-particular that can still show as a faint ghost. No hood stops it, because it
+the inner pane outside the lens chamber, crosses the gap and reflects off the
+outer pane, and comes back in through the chamber's mouth. On low-e glass in
+particular that can still show as a faint ghost. No shroud stops it, because it
 arrives through the glass the camera has to look through. If it is bad, turn
-the camera's infrared off and light the yard instead.
+the camera's infrared off and light the yard instead. The status light, inside
+the lens chamber, is best switched off in the app.
 
-HOW IT PRINTS. Glass face down. The front edge of the skirt and of the hood
-both come off the plate, which is the flattest, smoothest face the part has and
-the one that has to seal. Everything above that is vertical walls or upward-
-facing ledges; the only lean is the hood's inner wall when a long standoff
-makes it flare, and that is held under 40 degrees. Matte black, PETG or ASA:
-PLA softens in a sunny window.
+HOW IT PRINTS. Glass face down. Both chambers and the skirt come off the
+plate, the flattest face the part has and the one that has to seal. The
+wedge's outer walls lean outwards going down, so they are no overhang. What
+leans the other way is the sleeve, at the tilt, and the inside of the lens
+chamber and the partition, at whatever the footprint asks; ``validate``
+refuses tilts past 40 degrees and the tests hold every face under 45. Matte
+black, PETG or ASA: PLA softens in a sunny window.
 
-The camera's dimensions come from geom.cameras, which says which are sourced
-and which are estimates off a photo. ``coupon`` builds just the sleeve band, a
+The camera's dimensions come from geom.cameras, which says which are sourced,
+which measured and which estimated. ``coupon`` builds just the sleeve band, a
 ten-minute print, to check the fit before committing to the whole thing.
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+import numpy as np
 from build123d import (
     Box,
+    Face,
+    Location,
     Part,
     Plane,
     Pos,
     RectangleRounded,
-    Rot,
+    Shell,
+    Solid,
+    Vector,
+    Wire,
     extrude,
-    loft,
 )
+from scipy.spatial import ConvexHull
+from shapely import affinity
+from shapely.geometry import MultiPoint, Point, Polygon, box
 
 from geom import cameras
 from geom.cameras import Camera
@@ -77,12 +95,24 @@ MIN_WALL = 0.8
 """Two extrusions on the 0.4mm nozzle. Thinner than this a wall is one bead,
 and one bead of black plastic is not light-tight."""
 
-MAX_LEAN = 40.0
-"""Degrees off vertical for any wall that overhangs, five inside the 45 FDM
-holds, because this is the inside of a tube where a sag is the edge the lens
-looks past."""
+MAX_GRAZE = 80.0
+"""Degrees off square to the glass for the steepest ray of the picture. Past
+this the picture's lower corners run along the pane and the footprint, and the
+shroud with it, grows without bound."""
+
+MAX_LEAN = 44.0
+"""Degrees off vertical for the lens chamber's inside walls, a hair inside the
+45 FDM holds."""
+
+MAX_TILT = 40.0
+"""Degrees. The sleeve leans by the tilt, and past 40 its underside is closer
+to the 45 FDM holds than is comfortable for a face the camera has to slide
+into."""
 
 EPS = 0.01
+CUT = 0.2
+"""How far the chambers overrun the glass and the face, so neither leaves a
+skin."""
 
 
 @dataclass(frozen=True)
@@ -92,17 +122,25 @@ class Params:
     camera: Camera = cameras.TAPO_C100
     """The head this is cut for. Its estimated fields are the ones to measure."""
 
-    standoff: float = 5.0
-    """Face panel to glass, in mm. Less is better optically -- see the module
-    note -- but the lens bezel stands proud of the face and has to clear the
-    pane, so this is the bezel plus a couple of millimetres."""
+    tilt: float = 25.0
+    """Degrees the camera looks down through the glass. 0 looks straight out."""
+    standoff: float | None = None
+    """Height of the face's centre above the glass, mm. None puts it as close
+    as ``edge_gap`` and ``glass_gap`` allow, which is best optically: every
+    millimetre further back widens the patch of glass the picture spans."""
+    edge_gap: float = 1.2
+    """Plastic between the glass and the sleeve's top edge, which is the part
+    of the head the tilt brings nearest the pane."""
+    glass_gap: float = 2.0
+    """Clearance between the lens bezel's top edge and the glass."""
     margin: float = 3.0
     """Degrees added all round the published field of view when sizing the
-    hood's mouth, so a camera a little off-square in the sleeve still sees no
-    hood."""
+    lens chamber, so a camera a little off-square in the sleeve still sees no
+    shroud."""
 
     wall: float = 2.0
-    """Skirt and sleeve wall."""
+    """Skirt and sleeve wall, and the skirt's width round the chambers on the
+    glass."""
     fit: float = 0.3
     """Gap each side between the head and the sleeve. A slide fit; the rim
     sitting on the lip is what locates the camera, not the sleeve."""
@@ -110,19 +148,16 @@ class Params:
     """How far back the sleeve reaches over the head. Short enough to stay
     clear of the microSD slot and the stalk."""
 
-    hood_wall: float = 1.2
+    partition: float = 1.2
+    """Thickness of the wall between the lens chamber and the LED chamber."""
     hood_clearance: float = 1.0
-    """Gap each side between the lens bezel and the hood. Covers the lens
-    position being an estimate as much as it covers the print."""
-
-    ribs: tuple[float, ...] = field(default=(0.0, 90.0, 180.0))
-    """Angles, from the camera's right going up, of the ribs that hold the
-    hood. Left, right and up, because on the C100 the IR LEDs sit on the upper
-    diagonals and the light sensor and a port are below the lens."""
-    rib_width: float = 1.2
-    rib_gap: float = 1.0
-    """Ribs stop this far short of the face, so they shade nothing on it and
-    the only things touching the face are the hood and the lip."""
+    """Gap between the lens bezel and the partition where it meets the face.
+    Covers the lens position being an estimate as much as it covers the
+    print."""
+    partition_drop: float = 3.0
+    """How far below the lens centre the partition meets the face away from
+    the bezel. Lower leaves the IR LEDs more room above it; higher keeps
+    more of the face in the lens chamber."""
 
     flange: float = 6.0
     """Extra width at the glass end, all round, for adhesive. 0 for none, if the
@@ -135,40 +170,36 @@ class Params:
     notch_keep: float = 3.0
     """How much of the sleeve's bottom wall the notch leaves behind the lip."""
 
-    corner_gap: float = 1.0
-    """Clearance between the hood's mouth and the edge of the face opening."""
+    pad: float = 0.3
+    """Added round the picture's footprint on the glass, for the print."""
 
-    # --- what follows from those ------------------------------------------
+    # --- the frame the camera's face sits in -------------------------------
+    #
+    # The shroud's own coordinates: the glass is z = 0 and the part prints on
+    # it; z goes back into the room, y up the window, x along it. The face is a
+    # plane through ``centre`` with the camera's ``up`` and the shroud's x in
+    # it, and the camera looks along ``forward``.
 
     @property
-    def lens(self) -> tuple[float, float]:
-        """Lens centre in the shroud's x, y: mirrored, because the shroud is
-        modelled from behind the camera, looking out through it."""
+    def up(self) -> np.ndarray:
+        t = math.radians(self.tilt)
+        return np.array([0.0, math.cos(t), -math.sin(t)])
+
+    @property
+    def forward(self) -> np.ndarray:
+        t = math.radians(self.tilt)
+        return np.array([0.0, -math.sin(t), -math.cos(t)])
+
+    @property
+    def normal(self) -> np.ndarray:
+        """Out of the face, back towards the camera: the sleeve's axis."""
+        return -self.forward
+
+    @property
+    def lens2d(self) -> tuple[float, float]:
+        """Lens centre on the face, in the face's own x and up: x mirrored,
+        because the shroud is modelled from behind the camera."""
         return -self.camera.lens_x, self.camera.lens_y
-
-    @property
-    def pupil_z(self) -> float:
-        """Height of the lens's entrance pupil above the glass."""
-        c = self.camera
-        return self.standoff - c.bezel_proud + c.pupil_depth
-
-    @property
-    def hood_base(self) -> float:
-        """Inner radius of the hood where it meets the face."""
-        return self.camera.bezel_d / 2 + self.hood_clearance
-
-    @property
-    def hood_mouth(self) -> tuple[float, float]:
-        """Inner half-width and half-height of the hood on the glass: the
-        picture's footprint there, but never narrower than the base."""
-        fx, fy = self.camera.footprint(self.pupil_z, self.margin)
-        return max(fx, self.hood_base), max(fy, self.hood_base)
-
-    @property
-    def hood_lean(self) -> float:
-        """Degrees the hood's inner wall leans in going up from the glass."""
-        hx, hy = self.hood_mouth
-        return math.degrees(math.atan((max(hx, hy) - self.hood_base) / self.standoff))
 
     @property
     def sleeve_size(self) -> tuple[float, float, float]:
@@ -181,84 +212,179 @@ class Params:
         return w + 2 * self.wall, h + 2 * self.wall, r + self.wall
 
     @property
-    def height(self) -> float:
-        return self.standoff + self.sleeve
+    def closest(self) -> float:
+        """The least face-centre height that keeps the sleeve's top edge and
+        the bezel's top edge off the glass."""
+        t = math.radians(self.tilt)
+        c = self.camera
+        _, ly = self.lens2d
+        edge = self.edge_gap + self.outer_size[1] / 2 * math.sin(t)
+        bezel = (self.glass_gap + (ly + c.bezel_d / 2) * math.sin(t)
+                 + c.bezel_proud * math.cos(t))
+        return max(edge, bezel)
+
+    @property
+    def centre_z(self) -> float:
+        return self.closest if self.standoff is None else self.standoff
+
+    @property
+    def centre(self) -> np.ndarray:
+        return np.array([0.0, 0.0, self.centre_z])
+
+    def on_face(self, xy, offset: float = 0.0) -> np.ndarray:
+        """Face coordinates (x, up) to the shroud's, ``offset`` back along the
+        normal."""
+        xy = np.atleast_2d(np.asarray(xy, float))
+        return (self.centre + xy[:, :1] * np.array([1.0, 0, 0])
+                + xy[:, 1:2] * self.up + offset * self.normal)
+
+    def to_world(self, d: np.ndarray) -> np.ndarray:
+        """Camera-frame directions (x right, y up, -z forward) to the
+        shroud's."""
+        d = np.atleast_2d(d)
+        return (d[:, :1] * np.array([1.0, 0, 0]) + d[:, 1:2] * self.up
+                + d[:, 2:3] * self.normal)
+
+    @property
+    def lens(self) -> np.ndarray:
+        """The lens centre, on the face."""
+        return self.on_face(self.lens2d)[0]
+
+    @property
+    def pupil(self) -> np.ndarray:
+        """The entrance pupil: where the picture fans out from."""
+        c = self.camera
+        return self.lens + (c.bezel_proud - c.pupil_depth) * self.forward
+
+    @property
+    def pupil_height(self) -> float:
+        """The pupil's height above the glass."""
+        return float(self.pupil[2])
+
+    def rays(self, n: int = 24, margin: float | None = None):
+        """Origins round the pupil's rim and directions round the picture's
+        edge, every pairing, in the shroud's coordinates."""
+        c = self.camera
+        margin = self.margin if margin is None else margin
+        u, v = c.border(n)
+        dirs = self.to_world(c.direction(u, v, margin))
+        r = c.pupil_diameter / 2
+        a = np.linspace(0, 2 * math.pi, 8, endpoint=False)
+        rim = (self.pupil + r * np.outer(np.cos(a), [1.0, 0, 0])
+               + r * np.outer(np.sin(a), self.up))
+        origins = np.repeat(rim, len(dirs), axis=0)
+        return origins, np.tile(dirs, (len(rim), 1))
+
+    @property
+    def chamber_lean(self) -> float:
+        """Degrees off vertical of the lens chamber's steepest ceiling: the
+        inside walls where the picture, spreading towards the glass, is wider
+        below than the face is above."""
+        pts = _lens_chamber_points(self)
+        h = ConvexHull(pts)
+        worst = 0.0
+        for simplex, eq in zip(h.simplices, h.equations):
+            z = pts[simplex, 2]
+            if np.all(z < 0) or abs(eq[:3] @ self.normal - 1) < 1e-6:
+                continue  # the glass, or the face: both open
+            worst = max(worst, math.degrees(math.asin(np.clip(eq[2], -1, 1))))
+        return worst
+
+    @property
+    def graze(self) -> float:
+        """Degrees off square to the glass of the picture's steepest ray."""
+        _, d = self.rays(48)
+        return float(np.degrees(np.arccos(np.clip(-d[:, 2].max(), -1, 1))))
+
+    # --- outlines ----------------------------------------------------------
+
+    @property
+    def footprint(self) -> Polygon:
+        """Where the picture lands on the glass, with the margin and the pad."""
+        o, d = self.rays(48)
+        s = -o[:, 2] / d[:, 2]
+        hits = o[:, :2] + s[:, None] * d[:, :2]
+        return MultiPoint([tuple(p) for p in hits]).convex_hull.buffer(self.pad)
+
+    @property
+    def panel(self) -> Polygon:
+        c = self.camera
+        return _rounded(c.panel_w, c.panel_h, c.panel_corner)
+
+    @property
+    def lens_face(self) -> Polygon:
+        """The part of the face inside the lens chamber: the panel below the
+        partition, swept up round the bezel."""
+        c = self.camera
+        lx, ly = self.lens2d
+        cut = ly - self.partition_drop
+        low = self.panel.intersection(box(-c.panel_w, -c.panel_h, c.panel_w, cut))
+        bezel = Point(lx, ly).buffer(c.bezel_d / 2 + self.hood_clearance, quad_segs=32)
+        return low.union(bezel).convex_hull.intersection(self.panel)
+
+    @property
+    def lens_face_walled(self) -> Polygon:
+        return self.lens_face.buffer(self.partition, quad_segs=16)
+
+    @property
+    def led_face(self) -> Polygon:
+        """The part of the face inside the LED chamber."""
+        return self.panel.difference(self.lens_face_walled)
 
     @property
     def features(self) -> tuple[tuple[str, float, float, float], ...]:
-        """Face features in shroud coordinates: name, x, y, diameter."""
-        lx, ly = self.lens
+        """Face features in face coordinates: name, x, up, diameter."""
+        lx, ly = self.lens2d
         return tuple((f.name, lx - f.x, ly + f.y, f.diameter) for f in self.camera.features)
-
-    def rib_clearance(self, x: float, y: float) -> float:
-        """Distance in plan from a point to the nearest rib's centreline,
-        counting only the length of rib outside the hood."""
-        lx, ly = self.lens
-        best = math.inf
-        for a in self.ribs:
-            ux, uy = math.cos(math.radians(a)), math.sin(math.radians(a))
-            along = (x - lx) * ux + (y - ly) * uy
-            if along < self.hood_base:
-                continue
-            best = min(best, abs((x - lx) * uy - (y - ly) * ux))
-        return best
 
     def validate(self) -> None:
         c = self.camera
-        for name, value in (("wall", self.wall), ("hood_wall", self.hood_wall),
-                            ("rib_width", self.rib_width)):
+        for name, value in (("wall", self.wall), ("partition", self.partition)):
             if value < MIN_WALL:
                 raise ValueError(
                     f"a {value}mm {name} is under {MIN_WALL}mm, two extrusions on "
                     f"the 0.4mm nozzle; one bead of black plastic still lets "
                     f"light through"
                 )
-        if self.standoff < c.bezel_proud + 0.5:
+        if not 0 <= self.tilt <= MAX_TILT:
             raise ValueError(
-                f"a {self.standoff}mm standoff puts the {c.name}'s lens bezel, "
-                f"which stands {c.bezel_proud}mm proud of the face, against the "
-                f"glass. Give it at least {c.bezel_proud + 0.5}mm."
+                f"a {self.tilt} degree tilt is outside 0 to {MAX_TILT:.0f}: the "
+                f"sleeve leans by the tilt, and past {MAX_TILT:.0f} its "
+                f"underside is too close to what prints without support"
             )
-        if self.hood_lean > MAX_LEAN:
+        graze = self.graze
+        if graze > MAX_GRAZE:
             raise ValueError(
-                f"at a {self.standoff}mm standoff the picture is "
-                f"{2 * max(self.hood_mouth):.0f}mm wide at the glass, so the hood "
-                f"would lean {self.hood_lean:.0f} degrees to reach it from the "
-                f"bezel, past the {MAX_LEAN:.0f} that prints clean. Bring the "
-                f"camera closer to the glass."
+                f"at a {self.tilt:.0f} degree tilt the picture's lower corners "
+                f"meet the glass {graze:.0f} degrees off square, past "
+                f"{MAX_GRAZE:.0f}: they all but run along the pane, so the "
+                f"patch of glass the camera sees, and the shroud round it, "
+                f"would be enormous. Tilt less or lower the margin."
+            )
+        lean = self.chamber_lean
+        if lean > MAX_LEAN:
+            raise ValueError(
+                f"at a {self.tilt:.0f} degree tilt the picture is so much wider "
+                f"on the glass than the face that the inside of the lens "
+                f"chamber would overhang {lean:.0f} degrees, past the "
+                f"{MAX_LEAN:.0f} that prints without support. Tilt less, or "
+                f"lower the margin."
+            )
+        if self.edge_gap < MIN_WALL:
+            raise ValueError(
+                f"a {self.edge_gap}mm edge gap leaves less than a wall's worth "
+                f"of plastic between the sleeve's top edge and the glass"
+            )
+        if self.centre_z < self.closest - 1e-9:
+            raise ValueError(
+                f"a {self.centre_z:.1f}mm standoff puts the head or the "
+                f"{c.name}'s lens bezel against the glass at a {self.tilt:.0f} "
+                f"degree tilt. Give it at least {self.closest:.1f}mm, or leave "
+                f"it as None."
             )
         if not (c.panel_w < c.head_w and c.panel_h < c.head_h):
             raise ValueError("the face panel has to be smaller than the head, or "
                              "there is no rim for the lip to bear on")
-        lx, ly = self.lens
-        hx, hy = self.hood_mouth
-        reach_x = abs(lx) + hx + self.hood_wall + self.corner_gap
-        reach_y = abs(ly) + hy + self.hood_wall + self.corner_gap
-        if reach_x > c.panel_w / 2 or reach_y > c.panel_h / 2:
-            raise ValueError(
-                f"the hood's mouth reaches {max(reach_x, reach_y):.1f}mm from the "
-                f"centre and the face opening only {c.panel_w / 2:.1f}mm. Bring "
-                f"the camera closer to the glass."
-            )
-        for name, x, y, d in self.features:
-            if math.hypot(x - lx, y - ly) < self.hood_base + self.hood_wall + d / 2:
-                raise ValueError(
-                    f"the hood would sit on the {name}. Its outside is "
-                    f"{self.hood_base + self.hood_wall:.1f}mm from the lens and "
-                    f"the {name} is {math.hypot(x - lx, y - ly):.1f}mm away; "
-                    f"tighten hood_clearance or check the measurements."
-                )
-            if self.rib_clearance(x, y) < self.rib_width / 2 + d / 2:
-                raise ValueError(
-                    f"a rib runs in front of the {name}; move it off "
-                    f"{self.ribs}"
-                )
-        if not 0 < self.rib_gap < self.standoff - 0.5:
-            raise ValueError(
-                f"a {self.rib_gap}mm rib gap leaves the ribs "
-                f"{self.standoff - self.rib_gap:.1f}mm tall on a "
-                f"{self.standoff}mm standoff; keep them at least 0.5mm"
-            )
         if self.sleeve > c.head_depth - 2:
             raise ValueError(
                 f"a {self.sleeve}mm sleeve reaches past the back of a "
@@ -266,95 +392,176 @@ class Params:
             )
         if self.stalk_notch and self.notch_keep >= self.sleeve:
             raise ValueError("the stalk notch starts behind the end of the sleeve")
+        if self.led_face.is_empty or self.led_face.area < 1:
+            raise ValueError(
+                "the lens chamber takes the whole face, leaving no room above "
+                "the bezel for the LED chamber; lower partition_drop or "
+                "hood_clearance"
+            )
+        lens, leds = self.lens_face, self.led_face
+        for name, x, y, d in self.features:
+            spot = Point(x, y).buffer(d / 2, quad_segs=16)
+            if "IR LED" in name and not leds.contains(spot):
+                raise ValueError(
+                    f"the partition would sit on the {name}: it meets the face "
+                    f"{self.lens_face_walled.exterior.distance(Point(x, y)):.1f}mm "
+                    f"from its centre, inside its {d / 2:.1f}mm radius. Lower "
+                    f"partition_drop or tighten hood_clearance, or check the "
+                    f"measurements."
+                )
+            if not (lens.contains(spot) or leds.contains(spot)):
+                raise ValueError(
+                    f"the {name} is under the partition or the lip, so it would "
+                    f"see plastic instead of the glass; move partition_drop or "
+                    f"check the measurements"
+                )
 
 
-def _rounded(w: float, h: float, r: float):
+def _rounded(w: float, h: float, r: float) -> Polygon:
+    r = min(r, w / 2 - EPS, h / 2 - EPS)
+    return box(-w / 2 + r, -h / 2 + r, w / 2 - r, h / 2 - r).buffer(r, quad_segs=12)
+
+
+def _head_outline(params: Params) -> Polygon:
+    """The sleeve's outside as a polygon, a hair proud of the true arcs at
+    the corners, so the body under the sleeve never leaves its rounded
+    corners hanging over a chord."""
+    ow, oh, orr = params.outer_size
+    return _rounded(ow, oh, orr).buffer(0.05, quad_segs=12)
+
+
+def _ring(poly: Polygon) -> np.ndarray:
+    return np.asarray(poly.exterior.coords)[:-1]
+
+
+def _flat(poly: Polygon, z: float) -> np.ndarray:
+    xy = _ring(poly)
+    return np.column_stack([xy, np.full(len(xy), z)])
+
+
+def hull(points) -> Solid:
+    """The convex hull of a cloud of points, as a solid. Facets that share a
+    plane are merged, so the flat glass face comes out as one face."""
+    pts = np.asarray(points, float)
+    h = ConvexHull(pts)
+    groups: list[tuple[np.ndarray, set[int]]] = []
+    for simplex, eq in zip(h.simplices, h.equations):
+        for g_eq, members in groups:
+            if np.allclose(g_eq, eq, atol=1e-7):
+                members.update(int(i) for i in simplex)
+                break
+        else:
+            groups.append((eq, {int(i) for i in simplex}))
+    faces = []
+    for eq, members in groups:
+        n = eq[:3]
+        idx = np.array(sorted(members))
+        p = pts[idx]
+        mid = p.mean(axis=0)
+        e1 = p[0] - mid
+        e1 /= np.linalg.norm(e1)
+        e2 = np.cross(n, e1)
+        ang = np.arctan2((p - mid) @ e2, (p - mid) @ e1)
+        loop = p[np.argsort(ang)]
+        faces.append(Face(Wire.make_polygon([Vector(*q) for q in loop], close=True)))
+    return Solid(Shell(faces))
+
+
+def _face_plane(params: Params, offset: float = 0.0) -> Plane:
+    """A plane on the face, its y the camera's up and its z back along the
+    sleeve."""
+    origin = params.centre + offset * params.normal
+    return Plane(origin=Vector(*origin), x_dir=(1, 0, 0), z_dir=Vector(*params.normal))
+
+
+def glass_outline(params: Params) -> Polygon:
+    """The skirt's outside on the glass: the footprint and the LED chamber
+    with a wall round them, and the head's own outline dropped straight down,
+    so no outer wall leans out over the plate."""
+    head = _ring(_head_outline(params))
+    dropped = params.on_face(head)[:, :2]
+    led = params.on_face(_ring(params.led_face))[:, :2]
+    inner = MultiPoint([tuple(q) for q in led]).union(params.footprint).convex_hull
+    return inner.buffer(params.wall, quad_segs=12).union(
+        MultiPoint([tuple(q) for q in dropped]).convex_hull).convex_hull
+
+
+def _lens_chamber_points(params: Params, grow: float = 0.0) -> np.ndarray:
+    glass = params.footprint.buffer(grow, quad_segs=12)
+    face = params.lens_face.buffer(grow, quad_segs=12)
+    return np.vstack([_flat(glass, -CUT), params.on_face(_ring(face), CUT)])
+
+
+def lens_chamber(params: Params, grow: float = 0.0) -> Solid:
+    """What the lens looks through, overrun past the glass and the face. With
+    ``grow``, the same a wall's thickness bigger all round, to cut the LED
+    chamber away from."""
+    return hull(_lens_chamber_points(params, grow))
+
+
+def led_chamber(params: Params) -> Part:
+    """Straight down from the face above the partition to the glass, with
+    the lens chamber and its partition taken out. Straight down, and not out
+    along the LEDs' axes, so its walls are vertical and nothing of it runs
+    in under the lens chamber, which would leave the partition hanging."""
+    below = params.on_face(_ring(params.led_face))[:, :2]
+    outline = Wire.make_polygon([Vector(x, y, -CUT) for x, y in below], close=True)
+    prism = extrude(Face(outline), amount=params.centre_z + params.outer_size[1] + 10,
+                    dir=(0, 0, 1))
+    behind = _face_plane(params, CUT) * Pos(0, 0, 500) * Box(1000, 1000, 1000)
+    return prism - behind - lens_chamber(params, params.partition)
+
+
+def _sleeve(params: Params, plane: Plane, lip: float) -> Part:
+    """The sleeve band on a face plane: ``lip`` of solid ring in front of the
+    face with the panel's opening through it, then the sleeve behind."""
+    c = params.camera
+    ow, oh, orr = params.outer_size
+    sw, sh, sr = params.sleeve_size
+    top = params.sleeve
+    band = plane * Pos(0, 0, -lip) * extrude(_sketch(ow, oh, orr), amount=lip + top)
+    band -= plane * Pos(0, 0, -lip - 1) * extrude(
+        _sketch(c.panel_w, c.panel_h, c.panel_corner), amount=lip + 1 + EPS)
+    band -= plane * extrude(_sketch(sw, sh, sr), amount=top + 1)
+    if params.stalk_notch:
+        z0 = params.notch_keep
+        band -= plane * Pos(0, -(oh + sh) / 4, (z0 + top + 1) / 2) * Box(
+            params.stalk_notch, (oh - sh) / 2 + 2, top + 1 - z0)
+    return band
+
+
+def _sketch(w: float, h: float, r: float):
     return RectangleRounded(w, h, min(r, w / 2 - EPS, h / 2 - EPS))
 
 
-def _prism(w: float, h: float, r: float, z0: float, z1: float, at=(0.0, 0.0)) -> Part:
-    return Pos(at[0], at[1], z0) * extrude(_rounded(w, h, r), amount=z1 - z0)
-
-
-def _hood_section(params: Params, grow: float, z: float) -> tuple[float, float, float]:
-    """Width, height and corner radius of the hood's inner surface (or, with
-    ``grow`` = the wall, its outer one) at height ``z``: the mouth on the glass,
-    the bezel circle at the face, straight between and straight on past
-    either end, so a cutter can overrun the part without leaving a step."""
-    hx, hy = params.hood_mouth
-    rb = params.hood_base
-    t = z / params.standoff
-    x = hx + (rb - hx) * t + grow
-    y = hy + (rb - hy) * t + grow
-    return 2 * x, 2 * y, min(x, y)
-
-
-def _hood(params: Params, grow: float, z0: float, z1: float) -> Part:
-    """The hood between two heights: a loft when the mouth is wider than the
-    base, a straight tube when it is not."""
-    lo, hi = _hood_section(params, grow, z0), _hood_section(params, grow, z1)
-    if abs(lo[0] - hi[0]) < EPS and abs(lo[1] - hi[1]) < EPS:
-        return _prism(*lo, z0, z1, params.lens)
-    lx, ly = params.lens
-    return Pos(lx, ly, 0) * loft([
-        Plane.XY.offset(z0) * _rounded(*lo),
-        Plane.XY.offset(z1) * _rounded(*hi),
-    ])
-
-
 def skirt(params: Params) -> Part:
-    """The outer tube on its own: the lip, the sleeve and the stalk notch."""
-    c = params.camera
-    top = params.height
-    sw, sh, sr = params.sleeve_size
-    part = _prism(*params.outer_size, 0, top)
-    part -= _prism(c.panel_w, c.panel_h, c.panel_corner, -1, params.standoff + EPS)
-    part -= _prism(sw, sh, sr, params.standoff, top + 1)
-    if params.stalk_notch:
-        _, oh, _ = params.outer_size
-        z0 = params.standoff + params.notch_keep
-        part -= Pos(0, -(oh + sh) / 4, (z0 + top + 1) / 2) * Box(
-            params.stalk_notch, (oh - sh) / 2 + 2, top + 1 - z0)
-    return part
+    """The body and sleeve with no chambers cut: the convex wedge from the
+    glass outline to the head's outline on the face, and the sleeve on it."""
+    body = hull(np.vstack([
+        _flat(glass_outline(params), 0.0),
+        params.on_face(_ring(_head_outline(params))),
+    ]))
+    return body + _sleeve(params, _face_plane(params), 0.0)
 
 
 def build(params: Params) -> Part:
     """The shroud, glass face on the plate, camera end up."""
     params.validate()
-    c = params.camera
     part = skirt(params)
-
-    ow, oh, orr = params.outer_size
     if params.flange:
         f = params.flange
-        ring = _prism(ow + 2 * f, oh + 2 * f, orr + f, 0, params.flange_thickness)
-        ring -= _prism(c.panel_w, c.panel_h, c.panel_corner, -1, params.flange_thickness + 1)
-        part += ring
-
-    part += _hood(params, params.hood_wall, 0, params.standoff)
-
-    rib_top = params.standoff - params.rib_gap
-    reach = math.hypot(ow, oh)
-    lx, ly = params.lens
-    for a in params.ribs:
-        rib = Pos(lx, ly, rib_top / 2) * Rot(0, 0, a) * Pos(reach / 2, 0, 0) * Box(
-            reach, params.rib_width, rib_top)
-        part += rib & _prism(ow - EPS, oh - EPS, orr, 0, rib_top)
-
-    # Cut last, and a millimetre past both ends, so neither a rib nor the
-    # flange leaves a skin across the picture.
-    return part - _hood(params, 0, -1, params.standoff + 1)
+        ring = glass_outline(params).buffer(f, quad_segs=12)
+        part += hull(np.vstack([_flat(ring, 0.0), _flat(ring, params.flange_thickness)]))
+    part -= lens_chamber(params)
+    part -= led_chamber(params)
+    return part
 
 
 def coupon(params: Params, lip: float = 1.2) -> Part:
-    """The sleeve and a sliver of lip, sat on the plate: prints in minutes and
-    says whether the head fits before the whole shroud is committed to."""
+    """The sleeve and a sliver of lip, square to the plate: prints in minutes
+    and says whether the head fits before the whole shroud is committed to."""
     params.validate()
-    z0 = params.standoff - lip
-    ow, oh, _ = params.outer_size
-    band = skirt(params) & Pos(0, 0, (z0 + params.height) / 2) * Box(
-        ow + 2, oh + 2, params.height - z0)
-    return Pos(0, 0, -z0) * band
+    return _sleeve(params, Plane.XY.offset(lip), lip)
 
 
 if __name__ == "__main__":
@@ -368,7 +575,8 @@ if __name__ == "__main__":
     out.mkdir(exist_ok=True)
     export_stl(part, str(out / "window_shroud.stl"))
     bb = part.bounding_box()
-    hx, hy = p.hood_mouth
+    fp = p.footprint.bounds
     print(f"valid={part.is_valid} solids={len(part.solids())}")
     print(f"bbox={bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm")
-    print(f"hood mouth {2 * hx:.1f} x {2 * hy:.1f} mm, lean {p.hood_lean:.1f} deg")
+    print(f"lens {p.pupil_height:.1f} mm off the glass, footprint "
+          f"{fp[2] - fp[0]:.1f} x {fp[3] - fp[1]:.1f} mm")

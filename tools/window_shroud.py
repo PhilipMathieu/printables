@@ -1,7 +1,7 @@
 """Make a window shroud from the command line, and look at it without a slicer.
 
     python -m tools.window_shroud
-    python -m tools.window_shroud --standoff 6 --fit 0.4
+    python -m tools.window_shroud --tilt 15 --fit 0.4
     python -m tools.window_shroud --coupon -o out/shroud_fit
 
 Every estimated camera dimension in geom.cameras has a flag here, so a set of
@@ -9,9 +9,10 @@ caliper readings goes straight in without editing anything. Print ``--coupon``
 first: it is the sleeve and a sliver of the lip, and it answers whether the
 head fits in ten minutes rather than an hour.
 
-The preview is three views: the part as printed, a section through the lens
-with the picture's edge rays drawn in, and the glass face with the face's
-sensors marked, so it is obvious which parts of the face see out past the hood.
+The preview is three views: the part as printed; a section up through the lens
+with the tilted head, the top and bottom of the picture and an IR LED's axis
+drawn in; and the glass face with the picture's footprint and the face's
+sensors marked, so it is obvious which chamber each one looks out through.
 """
 
 from __future__ import annotations
@@ -43,68 +44,78 @@ GLASS = "#5b8fb9"
 
 
 def _section_view(ax, points, tris, params: Params) -> None:
-    """Through the lens, left to right: the hood, the bezel, the picture."""
-    lx, ly = params.lens
-    segs = section(points, tris, 1, ly)
-    ax.add_collection(LineCollection(segs[:, :, [0, 2]], colors=[INK], lw=1.6))
+    """Through the lens, bottom to top of the window: the wedge, the tilted
+    head, the partition, and the top and bottom of the picture."""
+    lx, _ = params.lens2d
+    segs = section(points, tris, 0, lx)
+    ax.add_collection(LineCollection(segs[:, :, [1, 2]], colors=[INK], lw=1.6))
 
     c = params.camera
     ax.axhline(0, color=GLASS, lw=2.2)
-    ax.text(params.outer_size[0] / 2 + params.flange, -0.6, "glass, on the plate",
-            color=GLASS, fontsize=8.5, ha="right", va="top")
-    # The head, as a ghost: where it sits on the lip, and its bezel.
-    w = c.head_w
-    ax.add_patch(plt.Rectangle((-w / 2, params.standoff), w,
-                               params.sleeve + 4, facecolor="#dddddd",
-                               edgecolor="none", zorder=0))
-    ax.add_patch(plt.Rectangle((lx - c.bezel_d / 2, params.standoff - c.bezel_proud),
-                               c.bezel_d, c.bezel_proud, facecolor="#bbbbbb",
-                               edgecolor="none", zorder=0))
-    # The picture's widest rays in this plane: horizontal, at the margin.
-    d = c.direction(np.array([-1.0, 1.0]), np.array([0.0, 0.0]), params.margin)
-    z = params.pupil_z
+    lo = params.footprint.bounds[1] - params.wall - params.flange
+    ax.text(lo, -0.8, "glass, on the plate", color=GLASS, fontsize=8.5,
+            ha="left", va="top")
+    # The head, as a ghost, sat on the lip at the tilt.
+    corners = params.on_face([[0, -c.head_h / 2], [0, c.head_h / 2]])
+    back = corners + params.normal * (params.sleeve + 6)
+    quad = np.array([corners[0], corners[1], back[1], back[0]])[:, 1:]
+    ax.add_patch(plt.Polygon(quad, facecolor="#dddddd", edgecolor="none", zorder=0))
+    # Top and bottom of the picture, at the margin.
+    d = params.to_world(c.direction(np.array([0.0, 0.0]), np.array([1.0, -1.0]),
+                                    params.margin))
+    o = params.pupil
     for ray in d:
-        t = z / -ray[2]
-        ax.plot([lx, lx + ray[0] * t], [z, 0], color=LIGHT, lw=1.1)
-    ax.text(lx, z * 0.45, f"{c.fov_h + 2 * params.margin:.0f}°", color=LIGHT,
-            fontsize=8.5, ha="center", va="center")
+        t = o[2] / -ray[2]
+        ax.plot([o[1], o[1] + ray[1] * t], [o[2], 0], color=LIGHT, lw=1.1)
+    # The IR LEDs' axes.
+    for name, x, y, _ in params.features:
+        if "IR LED" in name:
+            q = params.on_face([[x, y]])[0]
+            t = q[2] / -params.forward[2]
+            ax.plot([q[1], q[1] + params.forward[1] * t], [q[2], 0], color="#b03a2e",
+                    lw=0.9, ls="--")
+            ax.text(q[1] + 1.5, q[2] + 1, "IR LED axis", color="#b03a2e",
+                    fontsize=7.5, ha="left", va="bottom")
+            break
+    ax.text(lo + 30, -5, "← room floor", color=INK, fontsize=7.5,
+            ha="left", va="bottom")
+    ax.text(o[1] - 3, o[2] * 0.5, f"{c.fov_v + 2 * params.margin:.0f}°",
+            color=LIGHT, fontsize=8.5, ha="center", va="center")
 
-    half = params.outer_size[0] / 2 + params.flange
-    ax.set_xlim(-half - 2, half + 2)
-    ax.set_ylim(-3, params.height + 6)
+    bb_y = (lo - 2, quad[:, 0].max() + 2)
+    ax.set_xlim(*bb_y)
+    ax.set_ylim(-4, quad[:, 1].max() + 2)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_title(f"section · lens {params.pupil_z:.1f} mm off the glass",
+    ax.set_title(f"section · tilted {params.tilt:.0f}° down · lens "
+                 f"{params.pupil_height:.1f} mm off the glass",
                  color=INK, fontsize=11)
 
 
 def _plan_view(ax, points, tris, params: Params) -> None:
     """The glass face, as seen from outside: what touches the pane, and what
     looks out through it."""
-    cut = section(points, tris, 2, 0.5)
+    cut = section(points, tris, 2, 0.3)
     # Seen from outside, the camera's right is on the left, so flip x.
     if len(cut):
-        xy = cut[:, :, :2] * np.array([-1, 1])
-        ax.add_collection(LineCollection(xy, colors=[INK], lw=1.2))
-    rib_cut = section(points, tris, 2, params.standoff - params.rib_gap - 0.3)
-    if len(rib_cut):
-        ax.add_collection(LineCollection(rib_cut[:, :, :2] * np.array([-1, 1]),
-                                         colors=[INK], lw=0.6, alpha=0.5))
-
-    lx, ly = params.lens
-    c = params.camera
-    u, v = c.border(64)
-    d = c.direction(u, v)
-    t = params.pupil_z / -d[:, 2]
-    ax.fill(-(lx + d[:, 0] * t), ly + d[:, 1] * t, color=LIGHT, alpha=0.25, lw=0)
-    ax.text(-lx, ly, "picture", color=LIGHT, fontsize=8, ha="center", va="center")
+        ax.add_collection(LineCollection(cut[:, :, :2] * np.array([-1, 1]),
+                                         colors=[INK], lw=1.2))
+    fp = np.asarray(params.footprint.exterior.coords)
+    ax.fill(-fp[:, 0], fp[:, 1], color=LIGHT, alpha=0.25, lw=0)
+    ax.text(0, params.footprint.bounds[1] + 5, "picture", color=LIGHT, fontsize=8,
+            ha="center", va="center")
     for name, x, y, dia in params.features:
-        ax.add_patch(CirclePatch((-x, y), dia / 2, color=GLASS))
-        ax.text(-x + 2, y, name, color=GLASS, fontsize=7.5, va="center")
+        q = params.on_face([[x, y]])[0]
+        ax.add_patch(CirclePatch((-q[0], q[1]), dia / 2, color=GLASS))
+        left = -q[0] < -1 or name == "status light"
+        ax.text(-q[0] + (-2.5 if left else 2.5), q[1], name, color=GLASS,
+                fontsize=7, va="center", ha="right" if left else "left")
 
-    half = params.outer_size[0] / 2 + params.flange
-    ax.set_xlim(-half - 2, half + 2)
-    ax.set_ylim(-half - 2, half + 2)
+    x0, y0, x1, y1 = params.footprint.buffer(params.wall + params.flange + 2).bounds
+    _, oh, _ = params.outer_size
+    y1 = max(y1, params.on_face([[0, oh / 2]])[0][1] + params.flange + 2)
+    ax.set_xlim(-x1, -x0)
+    ax.set_ylim(y0, y1)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title("glass face, from outside", color=INK, fontsize=11)
@@ -141,13 +152,14 @@ def params_from(args: argparse.Namespace) -> Params:
     camera = replace(camera, **measured)
     return Params(
         camera=camera,
+        tilt=args.tilt,
         standoff=args.standoff,
         margin=args.margin,
         wall=args.wall,
         fit=args.fit,
         sleeve=args.sleeve,
         hood_clearance=args.hood_clearance,
-        ribs=tuple(args.ribs),
+        partition_drop=args.partition_drop,
         flange=args.flange,
         stalk_notch=args.stalk_notch,
     )
@@ -157,8 +169,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--camera", default="c100",
                     help=f"which head: {', '.join(cameras.CATALOGUE)}")
+    ap.add_argument("--tilt", type=float, default=Params.tilt,
+                    help="degrees the camera looks down through the glass")
     ap.add_argument("--standoff", type=float, default=Params.standoff,
-                    help="face panel to glass, mm; smaller keeps the hood small")
+                    help="face centre to glass, mm; leave out for as close as "
+                         "the head allows")
     ap.add_argument("--margin", type=float, default=Params.margin,
                     help="degrees added round the field of view")
     ap.add_argument("--wall", type=float, default=Params.wall)
@@ -167,8 +182,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sleeve", type=float, default=Params.sleeve,
                     help="how far back over the head the sleeve reaches")
     ap.add_argument("--hood-clearance", type=float, default=Params.hood_clearance)
-    ap.add_argument("--ribs", type=float, nargs="+", default=list(Params().ribs),
-                    help="rib angles in degrees, camera's right = 0, going up")
+    ap.add_argument("--partition-drop", type=float, default=Params.partition_drop,
+                    help="how far below the lens the partition meets the face")
     ap.add_argument("--flange", type=float, default=Params.flange,
                     help="adhesive flange width; 0 for none")
     ap.add_argument("--stalk-notch", type=float, default=Params.stalk_notch,
@@ -208,10 +223,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.no_preview and not args.coupon:
         print(f"wrote {preview(params, base.with_suffix('.png'), part)}")
 
-    hx, hy = params.hood_mouth
+    x0, y0, x1, y1 = params.footprint.bounds
     bb = part.bounding_box()
-    print(f"{params.camera.name}: lens {params.pupil_z:.1f} mm off the glass, "
-          f"hood mouth {2 * hx:.1f} × {2 * hy:.1f} mm")
+    print(f"{params.camera.name} tilted {params.tilt:.0f}°: lens "
+          f"{params.pupil_height:.1f} mm off the glass, picture spans "
+          f"{x1 - x0:.1f} × {y1 - y0:.1f} mm of it")
     print(f"valid={part.is_valid} {bb.size.X:.1f} × {bb.size.Y:.1f} × "
           f"{bb.size.Z:.1f} mm, {part.volume / 1000:.2f} cm^3")
     return 0
