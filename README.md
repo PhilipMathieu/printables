@@ -169,6 +169,37 @@ A clip holds a band of stem diameters a couple of millimetres wide — from its
 mouth, the smallest stem that stays captive, up to its bore, the largest that
 fits. `--set` prints the four sizes that tile the range between them.
 
+### Window shroud
+
+<img src="docs/window_shroud.png" alt="Window shroud: isometric, section through the lens, and the glass face" width="100%">
+
+Lets an indoor camera look out through a window at night without seeing the
+room, or its own infrared LEDs, reflected in the glass. Cut for a Tapo C100.
+It is two tubes pressed against the pane: a skirt that slides over the front
+of the head and blacks out the patch of glass the camera looks through, and a
+short hood from the face round the lens bezel to the glass. The LEDs, light
+sensor and status light sit between the two, looking straight out; what the
+glass reflects of the LEDs lands outside the hood, and the hood's wall stands
+between it and the lens. Four thin ribs on the diagonals hold the hood and stop
+short of the face so they shade nothing on it.
+
+```sh
+python -m tools.window_shroud --coupon                     # the sleeve band only: check the fit first
+python -m tools.window_shroud                              # the shroud, from the estimated dimensions
+python -m tools.window_shroud --head-w 56.2 --bezel-d 16.5 --standoff 5.5
+```
+
+The lens is close to a fisheye, 117° across the diagonal, so the hood's mouth
+has to grow by about three millimetres for every millimetre of standoff. Kept
+at 5mm, the whole picture fits inside a tube that only just clears the bezel;
+`validate` refuses standoffs where the hood would cover the face's sensors or
+lean past 40°. The field of view is sourced from TP-Link; the head and face
+layout are estimates off a product photo (see `geom/cameras.py`), and every one
+has a flag for a caliper reading. Print it glass face down, in matte black PETG
+or ASA: PLA softens in a sunny window. In double glazing, a little LED light can
+still bounce off the outer pane back into the hood; if that shows, turn the
+camera's infrared off and light the yard instead.
+
 ### Commemorative coin
 
 <img src="docs/tremblant_coin.png" alt="Coin: obverse, reverse and rim section" width="100%">
@@ -200,7 +231,7 @@ rings turns the same part into a coaster.
 
 | | |
 |---|---|
-| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing and hole saw catalogues |
+| `geom/` | Reusable primitives: the monotile, motifs (text, SVG, legends, strokes), the Command strip, lead webbing, hole saw and camera catalogues |
 | `parts/` | One module per model — `Params`, `validate()`, `build()` — plus modules that ship a specific configured instance |
 | `tools/` | Command line for each part, and matplotlib previews that need no GPU |
 | `p2s/` | The printer: profiles read from the installed Bambu Studio, what filament is on the shelf, and headless slicing |
