@@ -16,11 +16,16 @@ internals (a 52.6mm square board) agrees with. Expect them to be within a
 couple of millimetres, not tenths. Every one is a field, so measure the real
 camera with calipers and pass the numbers in rather than trusting these.
 
-The IR LEDs are the one thing a photo cannot show: they sit behind the black
-face panel and are dark in daylight. A phone camera sees 850nm, so point one at
-the C100 in a dark room with night vision on and the LEDs show as purple dots.
-The shroud keeps them outside its lens hood, which only works if they are more
-than ``hood`` millimetres from the lens; see parts.window_shroud.
+The IR LEDs, light sensor and lower-left port sit on a small board behind the
+face panel, and their positions come from a photo of that board, taken out of a
+C100: two surface-mount IR LEDs at the top corners, the light sensor's dome
+straight below the lens, a black grommet low on the left. The photo has no
+ruler, so it is scaled by assuming the board's 2x3 header pads are on 2.54mm
+pitch, which makes the lens hole about 19mm across. One caliper reading of that
+hole, or of the two LEDs centre to centre (about 25mm on that scale), confirms
+or rescales all of them. The shroud keeps the LEDs outside its lens hood, which
+only works while they are further from the lens than the hood's outside; see
+parts.window_shroud.
 
 THE FIELD OF VIEW IS A FISHEYE'S. TP-Link give three angles, horizontal,
 vertical and diagonal, and for the C100 the diagonal is wider than a rectilinear
@@ -177,9 +182,13 @@ TAPO_C100 = Camera(
     bezel_proud=3.0,
     pupil_depth=2.0,
     features=(
-        Feature("light sensor", 0.0, -15.0, 2.5),
+        # Off the photo of the IR board, at 14.7px/mm; see the module note.
+        Feature("left IR LED", -12.2, 12.9, 4.0),
+        Feature("right IR LED", 12.2, 12.9, 4.0),
+        Feature("light sensor", 0.0, -17.7, 4.0),
+        Feature("lower-left port", -13.3, -15.2, 4.0),
+        # Off the product photo: the green light on the face below the sensor.
         Feature("status light", 0.0, -20.0, 2.0),
-        Feature("microphone", -14.0, -10.5, 1.5),
     ),
 )
 

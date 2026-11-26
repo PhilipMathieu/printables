@@ -227,3 +227,10 @@ def test_a_single_bead_wall_is_refused():
 def test_a_sleeve_deeper_than_the_head_is_refused():
     with pytest.raises(ValueError, match="back of"):
         build(Params(sleeve=C100.head_depth))
+
+
+def test_ribs_on_the_diagonals_would_stand_in_front_of_the_ir_leds():
+    """The C100's IR LEDs are on the upper diagonals, which is why the ribs
+    are not."""
+    with pytest.raises(ValueError, match="IR LED"):
+        build(Params(ribs=(45.0, 135.0)))

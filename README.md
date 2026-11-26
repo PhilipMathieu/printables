@@ -180,7 +180,8 @@ of the head and blacks out the patch of glass the camera looks through, and a
 short hood from the face round the lens bezel to the glass. The LEDs, light
 sensor and status light sit between the two, looking straight out; what the
 glass reflects of the LEDs lands outside the hood, and the hood's wall stands
-between it and the lens. Four thin ribs on the diagonals hold the hood and stop
+between it and the lens. Three thin ribs, left, right and up, hold the hood
+clear of the C100's IR LEDs (top corners) and its sensor (below), and stop
 short of the face so they shade nothing on it.
 
 ```sh
@@ -194,7 +195,8 @@ has to grow by about three millimetres for every millimetre of standoff. Kept
 at 5mm, the whole picture fits inside a tube that only just clears the bezel;
 `validate` refuses standoffs where the hood would cover the face's sensors or
 lean past 40°. The field of view is sourced from TP-Link; the head and face
-layout are estimates off a product photo (see `geom/cameras.py`), and every one
+layout are estimates off a product photo and a photo of the IR board (see
+`geom/cameras.py`), and every one
 has a flag for a caliper reading. Print it glass face down, in matte black PETG
 or ASA: PLA softens in a sunny window. In double glazing, a little LED light can
 still bounce off the outer pane back into the hood; if that shows, turn the

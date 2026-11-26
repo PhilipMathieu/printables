@@ -20,8 +20,10 @@ Infrared from the LEDs leaves the face outside the hood, goes through the pane
 and lights the yard; what the inner surface of the glass reflects comes back
 outside the hood too, and the hood's wall stands between it and the lens. The
 LEDs, the light sensor and the status light all sit in the space between the
-two tubes, looking straight out, and four thin ribs on the diagonals hold the
-hood in place without standing in front of any of them.
+two tubes, looking straight out, and three thin ribs -- left, right and up --
+hold the hood in place without standing in front of any of them. On the C100
+the IR LEDs are at the top corners and the sensor and a port are below, so the
+diagonals and straight down are taken.
 
 WHY THE LENS SITS SO CLOSE TO THE GLASS. The C100's lens is close to a
 fisheye: 117 degrees across the diagonal. A hood has to be wider than the
@@ -113,10 +115,10 @@ class Params:
     """Gap each side between the lens bezel and the hood. Covers the lens
     position being an estimate as much as it covers the print."""
 
-    ribs: tuple[float, ...] = field(default=(45.0, 135.0, 225.0, 315.0))
+    ribs: tuple[float, ...] = field(default=(0.0, 90.0, 180.0))
     """Angles, from the camera's right going up, of the ribs that hold the
-    hood. The diagonals, because the sensor, status light and mic are below
-    the lens and the IR LEDs are most likely either side of it."""
+    hood. Left, right and up, because on the C100 the IR LEDs sit on the upper
+    diagonals and the light sensor and a port are below the lens."""
     rib_width: float = 1.2
     rib_gap: float = 1.0
     """Ribs stop this far short of the face, so they shade nothing on it and
