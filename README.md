@@ -195,8 +195,9 @@ has to grow by about three millimetres for every millimetre of standoff. Kept
 at 5mm, the whole picture fits inside a tube that only just clears the bezel;
 `validate` refuses standoffs where the hood would cover the face's sensors or
 lean past 40°. The field of view is sourced from TP-Link; the head and face
-layout are estimates off a product photo and a photo of the IR board (see
-`geom/cameras.py`), and every one
+layout are estimates off a product photo, apart from the IR board behind the
+face, whose lens hole, LEDs and light sensor were measured with calipers (see
+`geom/cameras.py`). Every estimate
 has a flag for a caliper reading. Print it glass face down, in matte black PETG
 or ASA: PLA softens in a sunny window. In double glazing, a little LED light can
 still bounce off the outer pane back into the hood; if that shows, turn the

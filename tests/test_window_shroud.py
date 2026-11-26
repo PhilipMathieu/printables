@@ -234,3 +234,18 @@ def test_ribs_on_the_diagonals_would_stand_in_front_of_the_ir_leds():
     are not."""
     with pytest.raises(ValueError, match="IR LED"):
         build(Params(ribs=(45.0, 135.0)))
+
+
+def test_the_ir_leds_clear_the_hood_with_room_to_spare():
+    """Philip's caliper readings put the near corner of each LED package about
+    13mm from the lens; the hood's outside is under 11mm. Keep at least 1.5mm
+    between them, so an LED a little off its measured spot still lights the
+    yard and not the inside of the hood."""
+    p = Params()
+    lx, ly = p.lens
+    outside = p.hood_base + p.hood_wall
+    leds = [f for f in p.features if "IR LED" in f[0]]
+    assert len(leds) == 2
+    for name, x, y, dia in leds:
+        near = math.hypot(x - lx, y - ly) - dia / 2
+        assert near - outside >= 1.5, name
