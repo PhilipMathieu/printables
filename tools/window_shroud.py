@@ -112,7 +112,7 @@ def _plan_view(ax, points, tris, params: Params) -> None:
                 fontsize=7, va="center", ha="right" if left else "left")
 
     x0, y0, x1, y1 = params.footprint.buffer(params.wall + params.flange + 2).bounds
-    _, oh, _ = params.outer_size
+    _, oh = params.outer_size
     y1 = max(y1, params.on_face([[0, oh / 2]])[0][1] + params.flange + 2)
     ax.set_xlim(-x1, -x0)
     ax.set_ylim(y0, y1)
@@ -141,8 +141,8 @@ def preview(params: Params, dest: Path, part: Part | None = None) -> Path:
     return dest
 
 
-CAMERA_FLAGS = ("head_w", "head_h", "head_corner", "head_depth", "panel_w",
-                "panel_h", "panel_corner", "lens_x", "lens_y", "bezel_d",
+CAMERA_FLAGS = ("head_w", "head_h", "head_n", "head_depth", "panel_w",
+                "panel_h", "panel_n", "lens_x", "lens_y", "bezel_d",
                 "bezel_proud", "pupil_depth")
 
 
@@ -190,7 +190,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="width of the slot for the stand's stalk; 0 for none")
     for name in CAMERA_FLAGS:
         ap.add_argument(f"--{name.replace('_', '-')}", type=float, default=None,
-                        help=f"measured {name.replace('_', ' ')}, mm")
+                        help=(f"squareness of the {name.split('_')[0]} outline, "
+                              f"as a superellipse exponent" if name.endswith("_n")
+                              else f"measured {name.replace('_', ' ')}, mm"))
     ap.add_argument("--coupon", action="store_true",
                     help="just the sleeve band, to check the fit")
     ap.add_argument("--material", default="ASA",

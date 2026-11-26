@@ -193,15 +193,16 @@ python -m tools.window_shroud --tilt 15 --head-w 56.2 --bezel-d 16.5
 The tilt sets most of the shape. The head's top edge reaches the glass first,
 so at 25° the lens sits about 13mm back rather than 4mm, and since the lens is
 close to a fisheye, 117° across the diagonal, its picture then spans about
-84 × 38mm of glass, which is why the part is 100 × 75 × 34mm. It also costs
+81 × 37mm of glass, which is why the part is 97 × 74 × 34mm. It also costs
 night vision: the IR LEDs are only 10mm above the lens, so at 25° the lower
 part of each beam lands inside the picture's footprint and is stopped by the
 partition, which is the point of it but leaves most of the beam's core on
 plastic. At 15° the beams clear it and the part is no wider than the head.
 `validate` refuses tilts where the picture would run along the glass or the
 lens chamber would overhang past 44°, which on a C100 is anything past
-25°. The field of view is sourced from TP-Link; the head and face layout are
-estimates off a product photo, apart from the IR board behind the face, whose
+25°. The field of view is sourced from TP-Link. The head is a squircle, not a
+rounded square, fitted to a top-down photo of the camera; its size and the
+face layout are estimates off a product photo, apart from the IR board behind the face, whose
 lens hole, LEDs and light sensor were measured with calipers (see
 `geom/cameras.py`). Every estimate has a flag for a caliper reading. Print it
 glass face down, in matte black PETG or ASA: PLA softens in a sunny window. In

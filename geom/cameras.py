@@ -6,7 +6,16 @@ SOURCED numbers come from the maker's own spec page: the lens, the field of
 view, the night-vision wavelength and the overall size. For the Tapo C100 that
 is TP-Link's US page for hardware v5.60.
 
-ESTIMATED numbers are everything about the head and its face: how big the head
+THE HEAD'S SHAPE was fitted to a photo Philip took of his own C100 from
+straight above. Its outline is a squircle, not a rounded square: a
+superellipse with exponent 3.5 fits the white rim to within 1.3 pixels in 770
+across, where the best rectangle with round corners is out by 3 on average and
+7 at worst. The glossy black face inside the rim is the same shape, a little
+squarer (3.7), and 94% of the rim's width, so the rim shows about 1.7mm each
+side. It is square to within half a percent, and the lens sits within half a
+millimetre of the centre. The photo gives shape and proportions, not size.
+
+ESTIMATED numbers are everything else about the head and its face: how big the head
 is, where the lens sits, how far its bezel stands proud, where the light sensor
 and status light are. TP-Link publish none of it. These were measured off
 TP-Link's own three-quarter product photo, with the pixel scale taken from the
@@ -77,16 +86,20 @@ class Camera:
     lens_f_number: float
     ir_nm: int
 
-    # Estimated: the head, as a rounded square seen from the front.
+    # Estimated: the head, as a squircle seen from the front.
     head_w: float
     head_h: float
-    head_corner: float
+    head_n: float
+    """Squareness of the head's outline, as the exponent of a superellipse,
+    |x/a|^n + |y/b|^n = 1: 2 is an ellipse, and it squares up as n grows.
+    Not a rectangle with round corners, whose sides are straight right up to
+    the corners: a squircle's sides bow away gradually all the way out."""
     head_depth: float
     """Front to back, not counting the stalk. Only matters as an upper bound
     on how deep a sleeve can go."""
     panel_w: float
     panel_h: float
-    panel_corner: float
+    panel_n: float
     """The black glossy face. Everything outside it is the white rim, which is
     where the shroud is allowed to bear."""
 
@@ -148,6 +161,15 @@ class Camera:
         v = np.concatenate([-one, t, one, -t])
         return u, v
 
+    def outline(self, which: str = "head", n: int = 192) -> np.ndarray:
+        """Points round the head's or the face panel's outline, centred, as
+        you face the camera."""
+        if which == "head":
+            w, h, e = self.head_w, self.head_h, self.head_n
+        else:
+            w, h, e = self.panel_w, self.panel_h, self.panel_n
+        return superellipse(w, h, e, n)
+
     def footprint(self, distance: float, margin: float = 0.0) -> tuple[float, float]:
         """Half-width and half-height on a plane ``distance`` in front of the
         pupil that the whole picture lands inside, pupil included."""
@@ -157,6 +179,17 @@ class Camera:
         pad = self.pupil_diameter / 2
         return (float(np.max(np.abs(d[:, 0] * reach))) + pad,
                 float(np.max(np.abs(d[:, 1] * reach))) + pad)
+
+
+def superellipse(w: float, h: float, n: float, samples: int = 192) -> np.ndarray:
+    """Points round |2x/w|^n + |2y/h|^n = 1, closer together at the corners
+    where it turns fastest."""
+    t = np.linspace(0, 2 * math.pi, samples, endpoint=False)
+    c, s = np.cos(t), np.sin(t)
+    return np.column_stack([
+        w / 2 * np.sign(c) * np.abs(c) ** (2 / n),
+        h / 2 * np.sign(s) * np.abs(s) ** (2 / n),
+    ])
 
 
 TAPO_C100 = Camera(
@@ -169,14 +202,15 @@ TAPO_C100 = Camera(
     lens_focal=3.15,
     lens_f_number=2.0,
     ir_nm=850,
-    # Estimated off the product photo; see the module note.
+    # The size is estimated off the product photo; the shape is fitted to
+    # Philip's top-down photo of his own camera. See the module note.
     head_w=56.6,
     head_h=56.6,
-    head_corner=12.0,
+    head_n=3.5,
     head_depth=22.0,
-    panel_w=52.7,
-    panel_h=52.7,
-    panel_corner=10.0,
+    panel_w=53.2,
+    panel_h=53.2,
+    panel_n=3.7,
     lens_x=0.0,
     lens_y=0.0,
     bezel_d=17.0,

@@ -15,7 +15,7 @@ from dataclasses import replace
 
 import numpy as np
 import pytest
-from build123d import Circle, Pos, RectangleRounded, extrude
+from build123d import Circle, Pos, extrude
 from shapely.geometry import Point
 
 from geom import cameras
@@ -23,6 +23,7 @@ from parts.window_shroud import (
     MAX_LEAN,
     Params,
     _face_plane,
+    _sketch,
     build,
     coupon,
     lens_chamber,
@@ -73,9 +74,8 @@ def _overlap(part, probe) -> float:
 
 def _head(params: Params, back: float):
     """The head as a block on the face plane, its front ``back`` behind it."""
-    c = params.camera
-    return _face_plane(params, back) * extrude(
-        RectangleRounded(c.head_w, c.head_h, c.head_corner), amount=params.sleeve + 5)
+    return _face_plane(params, back) * extrude(_sketch(params.head),
+                                               amount=params.sleeve + 5)
 
 
 def _lean(part) -> float:
@@ -114,6 +114,24 @@ def test_an_unknown_camera_says_what_there_is():
         cameras.named("c999")
 
 
+def test_the_head_is_a_squircle_fitted_to_the_photo():
+    """Philip's top-down photo fits a superellipse, not a rounded square: at
+    45 degrees its corner sits further in than a rounded square's of the
+    same width would, which is what made the first coupon's corners wrong."""
+    half = C100.head_w / 2
+    corner = np.hypot(*np.abs(C100.outline("head", 4 * 64)[32]))
+    assert corner == pytest.approx(half * math.sqrt(2) * 2 ** (-1 / C100.head_n), rel=1e-3)
+    assert 3.0 < C100.head_n < 4.0
+    assert C100.panel_w < C100.head_w
+
+
+def test_the_sleeve_follows_the_head_at_the_fit_all_the_way_round():
+    """Not just across the flats: the gap is the fit at the corners too."""
+    p = Params()
+    assert p.sleeve_inner.exterior.hausdorff_distance(p.head.exterior) == pytest.approx(
+        p.fit, abs=0.02)
+
+
 # --- the tilt --------------------------------------------------------------
 
 
@@ -129,7 +147,7 @@ def test_the_head_comes_as_close_to_the_glass_as_its_top_edge_allows():
     edge reaches the glass first, so the sleeve's top edge is exactly the
     edge gap off it and the lens lands back about 13mm."""
     p = Params()
-    _, oh, _ = p.outer_size
+    _, oh = p.outer_size
     top = p.on_face([[0.0, oh / 2]])[0]
     assert top[2] == pytest.approx(p.edge_gap)
     assert 12 < p.pupil_height < 15

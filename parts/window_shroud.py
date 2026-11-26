@@ -73,11 +73,9 @@ import numpy as np
 from build123d import (
     Box,
     Face,
-    Location,
     Part,
     Plane,
     Pos,
-    RectangleRounded,
     Shell,
     Solid,
     Vector,
@@ -85,8 +83,8 @@ from build123d import (
     extrude,
 )
 from scipy.spatial import ConvexHull
-from shapely import affinity
 from shapely.geometry import MultiPoint, Point, Polygon, box
+from shapely.geometry.polygon import orient
 
 from geom import cameras
 from geom.cameras import Camera
@@ -133,10 +131,12 @@ class Params:
     of the head the tilt brings nearest the pane."""
     glass_gap: float = 2.0
     """Clearance between the lens bezel's top edge and the glass."""
-    margin: float = 3.0
+    margin: float = 2.5
     """Degrees added all round the published field of view when sizing the
     lens chamber, so a camera a little off-square in the sleeve still sees no
-    shroud."""
+    shroud. A 0.3mm fit lets the head rock about half a degree, so 2.5 is
+    plenty; any more and, at 25 degrees, the chamber's lower corners lean past
+    what prints, because the squircle face pulls its corners in."""
 
     wall: float = 2.0
     """Skirt and sleeve wall, and the skirt's width round the chambers on the
@@ -202,14 +202,28 @@ class Params:
         return -self.camera.lens_x, self.camera.lens_y
 
     @property
-    def sleeve_size(self) -> tuple[float, float, float]:
-        c = self.camera
-        return c.head_w + 2 * self.fit, c.head_h + 2 * self.fit, c.head_corner + self.fit
+    def head(self) -> Polygon:
+        """The head's outline, as you face the camera (it is symmetric, so
+        mirroring it changes nothing)."""
+        return Polygon(self.camera.outline("head"))
 
     @property
-    def outer_size(self) -> tuple[float, float, float]:
-        w, h, r = self.sleeve_size
-        return w + 2 * self.wall, h + 2 * self.wall, r + self.wall
+    def sleeve_inner(self) -> Polygon:
+        return self.head.buffer(self.fit, quad_segs=16)
+
+    @property
+    def sleeve_outer(self) -> Polygon:
+        return self.head.buffer(self.fit + self.wall, quad_segs=16)
+
+    @property
+    def sleeve_size(self) -> tuple[float, float]:
+        x0, y0, x1, y1 = self.sleeve_inner.bounds
+        return x1 - x0, y1 - y0
+
+    @property
+    def outer_size(self) -> tuple[float, float]:
+        x0, y0, x1, y1 = self.sleeve_outer.bounds
+        return x1 - x0, y1 - y0
 
     @property
     def closest(self) -> float:
@@ -308,8 +322,7 @@ class Params:
 
     @property
     def panel(self) -> Polygon:
-        c = self.camera
-        return _rounded(c.panel_w, c.panel_h, c.panel_corner)
+        return Polygon(self.camera.outline("panel"))
 
     @property
     def lens_face(self) -> Polygon:
@@ -382,7 +395,7 @@ class Params:
                 f"degree tilt. Give it at least {self.closest:.1f}mm, or leave "
                 f"it as None."
             )
-        if not (c.panel_w < c.head_w and c.panel_h < c.head_h):
+        if not self.head.buffer(-0.5).contains(self.panel):
             raise ValueError("the face panel has to be smaller than the head, or "
                              "there is no rim for the lip to bear on")
         if self.sleeve > c.head_depth - 2:
@@ -417,17 +430,10 @@ class Params:
                 )
 
 
-def _rounded(w: float, h: float, r: float) -> Polygon:
-    r = min(r, w / 2 - EPS, h / 2 - EPS)
-    return box(-w / 2 + r, -h / 2 + r, w / 2 - r, h / 2 - r).buffer(r, quad_segs=12)
-
-
 def _head_outline(params: Params) -> Polygon:
-    """The sleeve's outside as a polygon, a hair proud of the true arcs at
-    the corners, so the body under the sleeve never leaves its rounded
-    corners hanging over a chord."""
-    ow, oh, orr = params.outer_size
-    return _rounded(ow, oh, orr).buffer(0.05, quad_segs=12)
+    """The sleeve's outside, a hair proud of it, so the body under the sleeve
+    never leaves the sleeve's edge hanging over it."""
+    return params.sleeve_outer.buffer(0.05, quad_segs=16)
 
 
 def _ring(poly: Polygon) -> np.ndarray:
@@ -515,14 +521,13 @@ def led_chamber(params: Params) -> Part:
 def _sleeve(params: Params, plane: Plane, lip: float) -> Part:
     """The sleeve band on a face plane: ``lip`` of solid ring in front of the
     face with the panel's opening through it, then the sleeve behind."""
-    c = params.camera
-    ow, oh, orr = params.outer_size
-    sw, sh, sr = params.sleeve_size
+    _, oh = params.outer_size
+    _, sh = params.sleeve_size
     top = params.sleeve
-    band = plane * Pos(0, 0, -lip) * extrude(_sketch(ow, oh, orr), amount=lip + top)
-    band -= plane * Pos(0, 0, -lip - 1) * extrude(
-        _sketch(c.panel_w, c.panel_h, c.panel_corner), amount=lip + 1 + EPS)
-    band -= plane * extrude(_sketch(sw, sh, sr), amount=top + 1)
+    band = plane * Pos(0, 0, -lip) * extrude(_sketch(params.sleeve_outer), amount=lip + top)
+    band -= plane * Pos(0, 0, -lip - 1) * extrude(_sketch(params.panel),
+                                                  amount=lip + 1 + EPS)
+    band -= plane * extrude(_sketch(params.sleeve_inner), amount=top + 1)
     if params.stalk_notch:
         z0 = params.notch_keep
         band -= plane * Pos(0, -(oh + sh) / 4, (z0 + top + 1) / 2) * Box(
@@ -530,8 +535,10 @@ def _sleeve(params: Params, plane: Plane, lip: float) -> Part:
     return band
 
 
-def _sketch(w: float, h: float, r: float):
-    return RectangleRounded(w, h, min(r, w / 2 - EPS, h / 2 - EPS))
+def _sketch(poly: Polygon) -> Face:
+    """A shapely outline as a flat face on XY, wound so it extrudes up."""
+    ring = _ring(orient(poly, 1.0))
+    return Face(Wire.make_polygon([Vector(x, y, 0) for x, y in ring], close=True))
 
 
 def skirt(params: Params) -> Part:
